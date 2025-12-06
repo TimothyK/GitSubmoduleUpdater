@@ -1,0 +1,97 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Microsoft/azure-pipelines-task-lib/master/tasks.schema.json",
+  "id": "b8d5a8c4-0f3e-4c9a-9f4b-2e8c7a1b5d3f",
+  "name": "GitSubmoduleUpdater",
+  "friendlyName": "Git Submodule Updater",
+  "description": "Check git submodules and determine which ones need updating to latest commits",
+  "helpMarkDown": "This task checks all git submodules in the repository and compares their current commit with the latest commit on the main branch of each submodule repository. [More Information](https://github.com/TimothyK/GitSubmoduleUpdater)",
+  "category": "Utility",
+  "author": "TimothyK",
+  "version": {
+    "Major": 1,
+    "Minor": 0,
+    "Patch": 0
+  },
+  "instanceNameFormat": "Check Git Submodules $(defaultBranch)",
+  "groups": [
+    {
+      "name": "advanced",
+      "displayName": "Advanced",
+      "isExpanded": false
+    }
+  ],
+  "inputs": [
+    {
+      "name": "workingDirectory",
+      "type": "filePath",
+      "label": "Working Directory",
+      "defaultValue": "$(System.DefaultWorkingDirectory)",
+      "required": false,
+      "helpMarkDown": "The directory containing the .gitmodules file. Defaults to the repository root."
+    },
+    {
+      "name": "gitmodulesPath",
+      "type": "string",
+      "label": ".gitmodules File Path",
+      "defaultValue": ".gitmodules",
+      "required": false,
+      "helpMarkDown": "Path to the .gitmodules file relative to the working directory."
+    },
+    {
+      "name": "defaultBranch",
+      "type": "string",
+      "label": "Default Branch Name",
+      "defaultValue": "main",
+      "required": false,
+      "helpMarkDown": "The default branch name to check for latest commits (e.g., 'main', 'master', 'develop').",
+      "groupName": "advanced"
+    },
+    {
+      "name": "failOnOutdated",
+      "type": "boolean",
+      "label": "Fail if submodules are outdated",
+      "defaultValue": "false",
+      "required": false,
+      "helpMarkDown": "If true, the task will fail if any submodules are found to be outdated.",
+      "groupName": "advanced"
+    },
+    {
+      "name": "outputFormat",
+      "type": "pickList",
+      "label": "Output Format",
+      "defaultValue": "detailed",
+      "required": false,
+      "options": {
+        "detailed": "Detailed output with full commit information",
+        "summary": "Summary output with counts only"
+      },
+      "helpMarkDown": "Choose the level of detail for the output.",
+      "groupName": "advanced"
+    }
+  ],
+  "outputVariables": [
+    {
+      "name": "SubmodulesTotal",
+      "description": "Total number of submodules found"
+    },
+    {
+      "name": "SubmodulesUpToDate",
+      "description": "Number of submodules that are up to date"
+    },
+    {
+      "name": "SubmodulesNeedingUpdate",
+      "description": "Number of submodules that need updating"
+    },
+    {
+      "name": "SubmodulesNeedingUpdateList",
+      "description": "Comma-separated list of submodule paths that need updating"
+    }
+  ],
+  "execution": {
+    "Node16": {
+      "target": "dist/index.js",
+      "argumentFormat": ""
+    }
+  },
+  "minimumAgentVersion": "2.144.0"
+}

@@ -1,0 +1,104 @@
+{
+  "manifestVersion": 1,
+  "id": "git-submodule-updater",
+  "name": "Git Submodule Updater",
+  "version": "1.0.0",
+  "publisher": "TimothyK",
+  "description": "Azure DevOps pipeline task to check git submodules and determine which ones need updating to the latest commits",
+  "public": false,
+  "categories": [
+    "Azure Pipelines"
+  ],
+  "tags": [
+    "Git",
+    "Submodule",
+    "CI/CD",
+    "Pipeline",
+    "Version Control",
+    "Build",
+    "DevOps"
+  ],
+  "targets": [
+    {
+      "id": "Microsoft.VisualStudio.Services"
+    }
+  ],
+  "scopes": [
+    "vso.build_execute"
+  ],
+  "icons": {
+    "default": "assets/logo.png"
+  },
+  "screenshots": [
+    {
+      "path": "assets/screenshot-output.png"
+    }
+  ],
+  "content": {
+    "details": {
+      "path": "overview.md"
+    },
+    "license": {
+      "path": "LICENSE"
+    }
+  },
+  "links": {
+    "home": {
+      "uri": "https://github.com/TimothyK/GitSubmoduleUpdater"
+    },
+    "getstarted": {
+      "uri": "https://github.com/TimothyK/GitSubmoduleUpdater#usage"
+    },
+    "repository": {
+      "uri": "https://github.com/TimothyK/GitSubmoduleUpdater"
+    },
+    "support": {
+      "uri": "https://github.com/TimothyK/GitSubmoduleUpdater/issues"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "uri": "https://github.com/TimothyK/GitSubmoduleUpdater"
+  },
+  "branding": {
+    "color": "rgb(34, 139, 34)",
+    "theme": "dark"
+  },
+  "contributions": [
+    {
+      "id": "git-submodule-updater-task",
+      "type": "ms.vss-distributed-task.task",
+      "targets": [
+        "ms.vss-distributed-task.tasks"
+      ],
+      "properties": {
+        "name": "."
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "task.json"
+    },
+    {
+      "path": "dist",
+      "addressable": true,
+      "packagePath": "dist"
+    },
+    {
+      "path": "node_modules/azure-pipelines-task-lib",
+      "addressable": true,
+      "packagePath": "node_modules/azure-pipelines-task-lib"
+    },
+    {
+      "path": "node_modules/simple-git",
+      "addressable": true,
+      "packagePath": "node_modules/simple-git"
+    },
+    {
+      "path": "assets",
+      "addressable": true,
+      "packagePath": "assets"
+    }
+  ]
+}

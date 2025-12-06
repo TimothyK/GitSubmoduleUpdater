@@ -1,0 +1,50 @@
+{
+  "name": "git-submodule-updater",
+  "displayName": "Git Submodule Updater",
+  "description": "Azure DevOps pipeline task to check git submodules for updates",
+  "version": "1.0.0",
+  "publisher": "TimothyK",
+  "keywords": [
+    "azure-devops",
+    "pipeline",
+    "task",
+    "git",
+    "submodule",
+    "ci-cd"
+  ],
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "clean": "rimraf dist",
+    "prepackage": "npm run clean && npm run build",
+    "package": "tfx extension create --manifest-globs vss-extension.json",
+    "publish": "tfx extension publish --manifest-globs vss-extension.json",
+    "test": "jest",
+    "lint": "eslint src --ext .ts"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.44.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.1.6",
+    "tfx-cli": "^0.15.0",
+    "rimraf": "^5.0.0"
+  },
+  "dependencies": {
+    "azure-pipelines-task-lib": "^4.0.0",
+    "simple-git": "^3.20.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TimothyK/GitSubmoduleUpdater.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
