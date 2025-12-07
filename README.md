@@ -30,7 +30,6 @@ steps:
 
 - **[Overview](overview.md)** - Comprehensive features and usage guide
 - **[Development Guide](DEVELOPMENT.md)** - Setup, testing, and contribution instructions
-- **[Examples](examples/)** - Real-world pipeline examples
 
 ## 🏃‍♂️ Example Pipeline
 
