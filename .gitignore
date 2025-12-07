@@ -62,3 +62,6 @@ coverage/
 # Test outputs
 test-results/
 junit.xml
+
+# VS Code generated files
+.taskkey
