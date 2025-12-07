@@ -23,7 +23,7 @@ steps:
 - task: GitSubmoduleUpdater@1
   displayName: 'Check Git Submodules'
   inputs:
-    defaultBranch: 'main'
+    failOnOutdated: false
 ```
 
 ## 📖 Documentation
