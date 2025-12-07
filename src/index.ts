@@ -147,15 +147,22 @@ class GitSubmoduleChecker {
         const branchToCheck = submodule.branch || this.defaultBranch;
         const latestCommit = await this.getLatestRemoteCommit(submodule.url, branchToCheck);
         
+        // Get git tags for both commits
+        const currentCommitTags = await this.getTagsForCommit(submodule.url, currentCommit);
+        const latestCommitTags = await this.getTagsForCommit(submodule.url, latestCommit);
+        
         const needsUpdate = currentCommit !== latestCommit;
+        
+        const currentCommitDisplay = this.formatCommitWithTags(currentCommit, currentCommitTags);
+        const latestCommitDisplay = this.formatCommitWithTags(latestCommit, latestCommitTags);
         
         return {
             name: path.basename(submodule.path),
             path: submodule.path,
             url: submodule.url,
             branch: branchToCheck,
-            currentCommit,
-            latestCommit,
+            currentCommit: currentCommitDisplay,
+            latestCommit: latestCommitDisplay,
             needsUpdate
         };
     }
@@ -195,6 +202,89 @@ class GitSubmoduleChecker {
         }
     }
 
+    private async getTagsForCommit(repoUrl: string, commitSha: string): Promise<string[]> {
+        try {
+            // Get all tags from the remote repository
+            const result = await this.git.raw(['ls-remote', '--tags', repoUrl]);
+            const lines = result.trim().split('\n').filter(line => line.trim());
+            const tags: string[] = [];
+            
+            for (const line of lines) {
+                const match = line.match(/^([a-f0-9]+)\s+refs\/tags\/(.+)$/);
+                if (match && match[1] && match[2]) {
+                    const tagCommit = match[1];
+                    const tagName = match[2];
+                    
+                    // For annotated tags, we want the dereferenced version (ending with ^{})
+                    // For lightweight tags, we use the tag reference directly
+                    let actualTagName = tagName;
+                    let useThis = true;
+                    
+                    if (tagName.endsWith('^{}')) {
+                        // This is the dereferenced commit for an annotated tag
+                        actualTagName = tagName.substring(0, tagName.length - 3);
+                    } else {
+                        // This might be a tag object reference - check if there's a corresponding ^{} version
+                        const hasDerefVersion = lines.some(l => l.includes(`refs/tags/${tagName}^{}`));
+                        if (hasDerefVersion) {
+                            // Skip this tag object reference, we'll use the ^{} version
+                            useThis = false;
+                        }
+                    }
+                    
+                    if (!useThis) {
+                        continue;
+                    }
+                    
+                    // Check if this tag points to our commit
+                    if (tagCommit === commitSha) {
+                        tags.push(actualTagName);
+                    }
+                }
+            }
+            
+            // Sort tags in reverse order (newer versions first, assuming semantic versioning)
+            return tags.sort((a, b) => {
+                // Try to sort semantically if they look like version numbers
+                const aMatch = a.match(/^v?(\d+)\.(\d+)\.(\d+)/);
+                const bMatch = b.match(/^v?(\d+)\.(\d+)\.(\d+)/);
+                
+                if (aMatch && bMatch) {
+                    const aMajor = parseInt(aMatch[1]);
+                    const aMinor = parseInt(aMatch[2]);
+                    const aPatch = parseInt(aMatch[3]);
+                    const bMajor = parseInt(bMatch[1]);
+                    const bMinor = parseInt(bMatch[2]);
+                    const bPatch = parseInt(bMatch[3]);
+                    
+                    if (aMajor !== bMajor) return bMajor - aMajor;
+                    if (aMinor !== bMinor) return bMinor - aMinor;
+                    return bPatch - aPatch;
+                }
+                
+                // Fallback to alphabetical sorting
+                return b.localeCompare(a);
+            });
+        } catch (error) {
+            tl.debug(`Could not fetch tags for commit ${commitSha} from ${repoUrl}: ${error}`);
+            return [];
+        }
+    }
+
+    private formatCommitWithTags(commitSha: string, tags: string[]): string {
+        const shortSha = commitSha.substring(0, 8);
+        if (tags.length === 0) {
+            return shortSha;
+        }
+        
+        // Limit to the first 3 tags to avoid overly long output
+        const displayTags = tags.slice(0, 3);
+        const tagsString = displayTags.join(', ');
+        const moreTagsIndicator = tags.length > 3 ? ` (+${tags.length - 3} more)` : '';
+        
+        return `${shortSha} (${tagsString}${moreTagsIndicator})`;
+    }
+
     private printSummary(results: SubmoduleInfo[]): void {
         console.log('📊 SUMMARY');
         console.log('═'.repeat(50));
@@ -214,9 +304,7 @@ class GitSubmoduleChecker {
             console.log('⚠️  SUBMODULES NEEDING UPDATES:');
             const outdatedSubmodules = results.filter(r => r.needsUpdate);
             for (const submodule of outdatedSubmodules) {
-                const shortCurrent = submodule.currentCommit.substring(0, 8);
-                const shortLatest = submodule.latestCommit.substring(0, 8);
-                console.log(`   • ${submodule.path}: ${shortCurrent} → ${shortLatest}`);
+                console.log(`   • ${submodule.path}: ${submodule.currentCommit} → ${submodule.latestCommit}`);
             }
             console.log('');
         }
