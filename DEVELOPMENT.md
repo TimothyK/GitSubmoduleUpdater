@@ -65,7 +65,6 @@ export INPUT_WORKINGDIRECTORY="/path/to/your/repo"
 export INPUT_GITMODULESPATH=".gitmodules" 
 export INPUT_DEFAULTBRANCH="main"
 export INPUT_FAILONOUTDATED="false"
-export INPUT_OUTPUTFORMAT="detailed"
 
 # Run the task
 node dist/index.js
@@ -81,8 +80,8 @@ mkdir test-repo && cd test-repo
 git init
 
 # Add some submodules
-git submodule add https://github.com/some-org/lib1.git libs/lib1
-git submodule add https://github.com/some-org/lib2.git libs/lib2
+git submodule add -b main https://github.com/some-org/lib1.git libs/lib1
+git submodule add -b main https://github.com/some-org/lib2.git libs/lib2
 
 # Commit the .gitmodules file
 git add .

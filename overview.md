@@ -25,7 +25,6 @@ steps:
     gitmodulesPath: '.gitmodules'
     defaultBranch: 'main'
     failOnOutdated: false
-    outputFormat: 'detailed'
 ```
 
 ### Complete Example with Conditional Updates
@@ -40,8 +39,7 @@ steps:
 - task: GitSubmoduleUpdater@1
   displayName: 'Check Git Submodules'
   inputs:
-    defaultBranch: 'main'
-    outputFormat: 'detailed'
+    failOnOutdated: false
 
 # Display results
 - script: |
@@ -65,7 +63,7 @@ steps:
 |-------|-------------|----------|----------|
 | `workingDirectory` | Directory containing the .gitmodules file | No | `$(System.DefaultWorkingDirectory)` |
 | `gitmodulesPath` | Path to .gitmodules file relative to working directory | No | `.gitmodules` |
-| `defaultBranch` | Default branch name to check for latest commits | No | `main` |
+| `defaultBranch` | Default branch name to check for latest commits on submodule repos | No | `main` |
 | `failOnOutdated` | Fail the task if submodules are outdated | No | `false` |
 
 

@@ -35,7 +35,8 @@
       "label": ".gitmodules File Path",
       "defaultValue": ".gitmodules",
       "required": false,
-      "helpMarkDown": "Path to the .gitmodules file relative to the working directory."
+      "helpMarkDown": "Path to the .gitmodules file relative to the working directory.",
+      "groupName": "advanced"
     },
     {
       "name": "defaultBranch",
@@ -43,7 +44,7 @@
       "label": "Default Branch Name",
       "defaultValue": "main",
       "required": false,
-      "helpMarkDown": "The default branch name to check for latest commits (e.g., 'main', 'master', 'develop').",
+      "helpMarkDown": "The default branch name to check for latest commits on submodule repos (e.g., 'main', 'master', 'develop').",
       "groupName": "advanced"
     },
     {

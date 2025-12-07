@@ -49,7 +49,6 @@ steps:
   displayName: 'Check Submodules'
   inputs:
     workingDirectory: '$(System.DefaultWorkingDirectory)'
-    defaultBranch: 'main'
     failOnOutdated: false
 
 - script: |
@@ -82,7 +81,7 @@ The task provides these pipeline variables:
 |-------|-------------|---------|
 | `workingDirectory` | Repository root directory | `$(System.DefaultWorkingDirectory)` |
 | `gitmodulesPath` | Path to .gitmodules file | `.gitmodules` |
-| `defaultBranch` | Branch to check for latest commits | `main` |
+| `defaultBranch` | Branch to check for latest commits on submodule repos | `main` |
 | `failOnOutdated` | Fail task if submodules are outdated | `false` |
 
 
