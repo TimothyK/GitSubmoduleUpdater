@@ -117,14 +117,14 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development instructions.
 
 [1/2] Checking submodule: libs/common
   📍 URL: https://github.com/myorg/common.git
-  📌 Current commit: a1b2c3d4e5f6g7h8
-  🏷️  Latest commit: x1y2z3a4b5c6d7e8
+  📌 Current commit: a1b2c3d4 (v1.5.2)
+  🏷️  Latest commit: x1y2z3a4 (v2.0.0, v2.0.0-rc1)
   ⚠️  Status: NEEDS UPDATE
 
 [2/2] Checking submodule: libs/utils  
   📍 URL: https://github.com/myorg/utils.git
-  📌 Current commit: m3n4o5p6q7r8s9t0
-  🏷️  Latest commit: m3n4o5p6q7r8s9t0
+  📌 Current commit: m3n4o5p6 (v3.1.0, v3.0.5 +2 more)
+  🏷️  Latest commit: m3n4o5p6 (v3.1.0, v3.0.5 +2 more)
   ✅ Status: UP TO DATE
 
 📊 SUMMARY
@@ -135,7 +135,7 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development instructions.
 ❌ Errors: 0
 
 ⚠️  SUBMODULES NEEDING UPDATES:
-   • libs/common: a1b2c3d4 → x1y2z3a4
+   • libs/common: a1b2c3d4 (v1.5.2) → x1y2z3a4 (v2.0.0, v2.0.0-rc1)
 ```
 
 ## 🤝 Contributing
