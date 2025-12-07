@@ -90,20 +90,20 @@ The task sets these variables for use in subsequent tasks:
 
 [1/3] Checking submodule: libs/common
   📍 URL: https://github.com/myorg/common-lib.git
-  📌 Current commit: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0
-  🏷️  Latest commit: x1y2z3a4b5c6d7e8f9g0h1i2j3k4l5m6n7o8p9q0
+  📌 Current commit: a1b2c3d4 (v1.8.5)
+  🏷️  Latest commit: x1y2z3a4 (v2.1.0, v2.0.8)
   ⚠️  Status: NEEDS UPDATE
 
 [2/3] Checking submodule: libs/utils
   📍 URL: https://github.com/myorg/utils-lib.git
-  📌 Current commit: p9o8n7m6l5k4j3i2h1g0f9e8d7c6b5a4z3y2x1w0
-  🏷️  Latest commit: p9o8n7m6l5k4j3i2h1g0f9e8d7c6b5a4z3y2x1w0
+  📌 Current commit: p9o8n7m6 (v4.2.1, v4.2.0 +1 more)
+  🏷️  Latest commit: p9o8n7m6 (v4.2.1, v4.2.0 +1 more)
   ✅ Status: UP TO DATE
 
 [3/3] Checking submodule: vendor/third-party
   📍 URL: https://github.com/external/library.git
-  📌 Current commit: m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2
-  🏷️  Latest commit: m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2
+  📌 Current commit: m3n4o5p6 (v0.9.12)
+  🏷️  Latest commit: m3n4o5p6 (v0.9.12)
   ✅ Status: UP TO DATE
 
 📊 SUMMARY
@@ -114,7 +114,7 @@ The task sets these variables for use in subsequent tasks:
 ❌ Errors: 0
 
 ⚠️  SUBMODULES NEEDING UPDATES:
-   • libs/common: a1b2c3d4 → x1y2z3a4
+   • libs/common: a1b2c3d4 (v1.8.5) → x1y2z3a4 (v2.1.0, v2.0.8)
 ```
 
 ## 🛠️ How It Works
