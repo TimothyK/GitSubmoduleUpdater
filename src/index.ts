@@ -24,14 +24,13 @@ class GitSubmoduleChecker {
     private workingDirectory: string;
     private gitmodulesPath: string;
     private defaultBranch: string;
-    private outputFormat: string;
+
     private git: SimpleGit;
 
-    constructor(workingDir: string, gitmodulesPath: string, defaultBranch: string = 'main', outputFormat: string = 'detailed') {
+    constructor(workingDir: string, gitmodulesPath: string, defaultBranch: string = 'main') {
         this.workingDirectory = workingDir;
         this.gitmodulesPath = path.resolve(workingDir, gitmodulesPath);
         this.defaultBranch = defaultBranch;
-        this.outputFormat = outputFormat;
         this.git = simpleGit(workingDir);
     }
 
@@ -66,22 +65,14 @@ class GitSubmoduleChecker {
                 const result = await this.checkSubmodule(submodule);
                 results.push(result);
                 
-                if (this.outputFormat === 'detailed') {
-                    console.log(`  📍 URL: ${result.url}`);
-                    console.log(`  📌 Current commit: ${result.currentCommit}`);
-                    console.log(`  🏷️  Latest commit: ${result.latestCommit}`);
-                    
-                    if (result.needsUpdate) {
-                        console.log('  ⚠️  Status: NEEDS UPDATE');
-                    } else {
-                        console.log('  ✅ Status: UP TO DATE');
-                    }
+                console.log(`  📍 URL: ${result.url}`);
+                console.log(`  📌 Current commit: ${result.currentCommit}`);
+                console.log(`  🏷️  Latest commit: ${result.latestCommit}`);
+                
+                if (result.needsUpdate) {
+                    console.log('  ⚠️  Status: NEEDS UPDATE');
                 } else {
-                    if (result.needsUpdate) {
-                        console.log('  ⚠️  NEEDS UPDATE');
-                    } else {
-                        console.log('  ✅ UP TO DATE');
-                    }
+                    console.log('  ✅ Status: UP TO DATE');
                 }
             } catch (error) {
                 const errorResult: SubmoduleInfo = {
@@ -340,11 +331,9 @@ async function run(): Promise<void> {
         const gitmodulesPath = tl.getInput('gitmodulesPath') || '.gitmodules';
         const defaultBranch = tl.getInput('defaultBranch') || 'main';
         const failOnOutdated = tl.getBoolInput('failOnOutdated') || false;
-        const outputFormat = tl.getInput('outputFormat') || 'detailed';
+        tl.debug(`Task inputs - workingDirectory: ${workingDirectory}, gitmodulesPath: ${gitmodulesPath}, defaultBranch: ${defaultBranch}, failOnOutdated: ${failOnOutdated}`);
 
-        tl.debug(`Task inputs - workingDirectory: ${workingDirectory}, gitmodulesPath: ${gitmodulesPath}, defaultBranch: ${defaultBranch}, failOnOutdated: ${failOnOutdated}, outputFormat: ${outputFormat}`);
-
-        const checker = new GitSubmoduleChecker(workingDirectory, gitmodulesPath, defaultBranch, outputFormat);
+        const checker = new GitSubmoduleChecker(workingDirectory, gitmodulesPath, defaultBranch);
         const results = await checker.checkSubmodules();
 
         // Check if we should fail the task

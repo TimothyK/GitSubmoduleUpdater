@@ -24,7 +24,6 @@ steps:
   displayName: 'Check Git Submodules'
   inputs:
     defaultBranch: 'main'
-    outputFormat: 'detailed'
 ```
 
 ## 📖 Documentation
@@ -85,7 +84,7 @@ The task provides these pipeline variables:
 | `gitmodulesPath` | Path to .gitmodules file | `.gitmodules` |
 | `defaultBranch` | Branch to check for latest commits | `main` |
 | `failOnOutdated` | Fail task if submodules are outdated | `false` |
-| `outputFormat` | Output detail level (detailed/summary) | `detailed` |
+
 
 ## 🛠️ Development
 

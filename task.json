@@ -54,19 +54,6 @@
       "required": false,
       "helpMarkDown": "If true, the task will fail if any submodules are found to be outdated.",
       "groupName": "advanced"
-    },
-    {
-      "name": "outputFormat",
-      "type": "pickList",
-      "label": "Output Format",
-      "defaultValue": "detailed",
-      "required": false,
-      "options": {
-        "detailed": "Detailed output with full commit information",
-        "summary": "Summary output with counts only"
-      },
-      "helpMarkDown": "Choose the level of detail for the output.",
-      "groupName": "advanced"
     }
   ],
   "outputVariables": [

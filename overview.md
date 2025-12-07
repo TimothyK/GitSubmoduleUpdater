@@ -67,7 +67,7 @@ steps:
 | `gitmodulesPath` | Path to .gitmodules file relative to working directory | No | `.gitmodules` |
 | `defaultBranch` | Default branch name to check for latest commits | No | `main` |
 | `failOnOutdated` | Fail the task if submodules are outdated | No | `false` |
-| `outputFormat` | Level of detail in output (detailed/summary) | No | `detailed` |
+
 
 ## 📊 Output Variables
 
