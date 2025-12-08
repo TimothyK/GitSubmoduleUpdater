@@ -8,6 +8,9 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for creating releases
+      actions: read    # Required for reading workflow info
     
     steps:
     - name: Checkout repository
