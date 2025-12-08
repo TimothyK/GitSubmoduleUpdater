@@ -1,6 +1,7 @@
 import * as tl from 'azure-pipelines-task-lib/task';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as https from 'https';
 import { simpleGit, SimpleGit } from 'simple-git';
 
 interface SubmoduleInfo {
@@ -18,6 +19,181 @@ interface GitmodulesEntry {
     path: string;
     url: string;
     branch?: string;
+}
+
+interface PullRequestComment {
+    id: number;
+    content: string;
+    commentType: number;
+}
+
+interface PullRequestThread {
+    id: number;
+    comments: PullRequestComment[];
+    status: number;
+}
+
+interface PullRequestCommentsResponse {
+    value: PullRequestThread[];
+    count: number;
+}
+
+interface AzureDevOpsEnvironment {
+    teamFoundationServerUri: string;
+    teamProjectId: string;
+    buildRepositoryName: string;
+    buildReason: string;
+    pullRequestId?: string;
+    systemAccessToken?: string;
+    myAccessToken?: string;
+}
+
+class AzureDevOpsApi {
+    private environment: AzureDevOpsEnvironment;
+
+    constructor() {
+        this.environment = {
+            teamFoundationServerUri: process.env.SYSTEM_TEAMFOUNDATIONSERVERURI || '',
+            teamProjectId: process.env.SYSTEM_TEAMPROJECTID || '',
+            buildRepositoryName: process.env.BUILD_REPOSITORY_NAME || '',
+            buildReason: process.env.BUILD_REASON || '',
+            pullRequestId: process.env.SYSTEM_PULLREQUEST_PULLREQUESTID,
+            systemAccessToken: process.env.SYSTEM_ACCESSTOKEN,
+            myAccessToken: process.env.MY_ACCESSTOKEN
+        };
+    }
+
+    private getAuthorizationHeaders(): { [key: string]: string } {
+        if (this.environment.myAccessToken) {
+            const pair = `:${this.environment.myAccessToken}`;
+            const encodedCreds = Buffer.from(pair).toString('base64');
+            return { 'Authorization': `Basic ${encodedCreds}` };
+        } else if (this.environment.systemAccessToken) {
+            return { 'Authorization': `Bearer ${this.environment.systemAccessToken}` };
+        } else {
+            throw new Error('No access token available for Azure DevOps API');
+        }
+    }
+
+    private getApiBaseUrl(): string {
+        return `${this.environment.teamFoundationServerUri}${this.environment.teamProjectId}/_apis`;
+    }
+
+    private async makeApiCall(queryString: string, method: string = 'GET', body?: string): Promise<any> {
+        return new Promise((resolve, reject) => {
+            const baseUrl = this.getApiBaseUrl();
+            const url = baseUrl + queryString;
+            const parsedUrl = new URL(url);
+            
+            const headers: { [key: string]: string } = {
+                ...this.getAuthorizationHeaders(),
+                'Content-Type': 'application/json'
+            };
+
+            if (body) {
+                headers['Content-Length'] = Buffer.byteLength(body).toString();
+            }
+
+            const options = {
+                hostname: parsedUrl.hostname,
+                port: parsedUrl.port || 443,
+                path: parsedUrl.pathname + parsedUrl.search,
+                method: method,
+                headers: headers
+            };
+
+            tl.debug(`${method} ${url}`);
+
+            const req = https.request(options, (res) => {
+                let data = '';
+
+                res.on('data', (chunk) => {
+                    data += chunk;
+                });
+
+                res.on('end', () => {
+                    try {
+                        const response = JSON.parse(data);
+                        if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+                            resolve(response);
+                        } else {
+                            reject(new Error(`HTTP ${res.statusCode}: ${data}`));
+                        }
+                    } catch (error) {
+                        reject(new Error(`Failed to parse JSON response: ${error}`));
+                    }
+                });
+            });
+
+            req.on('error', (error) => {
+                reject(error);
+            });
+
+            if (body) {
+                req.write(body);
+            }
+
+            req.end();
+        });
+    }
+
+    public isPullRequest(): boolean {
+        return this.environment.buildReason === 'PullRequest';
+    }
+
+    public async getPullRequestComments(): Promise<PullRequestCommentsResponse> {
+        if (!this.environment.pullRequestId) {
+            throw new Error('Pull Request ID not available');
+        }
+
+        const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullRequests/${this.environment.pullRequestId}/threads?api-version=6.0`;
+        return await this.makeApiCall(queryString);
+    }
+
+    public async addPullRequestComment(commentContent: string): Promise<void> {
+        if (!this.environment.pullRequestId) {
+            throw new Error('Pull Request ID not available');
+        }
+
+        const body = JSON.stringify({
+            comments: [
+                {
+                    parentCommentId: 0,
+                    content: commentContent,
+                    commentType: 1
+                }
+            ],
+            status: 1
+        });
+
+        const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullRequests/${this.environment.pullRequestId}/threads?api-version=6.0`;
+        await this.makeApiCall(queryString, 'POST', body);
+    }
+
+    public async addPullRequestCommentIfNotExists(commentContent: string): Promise<boolean> {
+        try {
+            // Get existing comments
+            const commentsResponse = await this.getPullRequestComments();
+            
+            // Check if comment already exists
+            const hasComment = commentsResponse.value.some(thread => 
+                thread.comments.some(comment => comment.content === commentContent)
+            );
+
+            if (hasComment) {
+                tl.debug(`Comment already exists: ${commentContent.substring(0, 50)}...`);
+                return false;
+            }
+
+            // Add the comment
+            await this.addPullRequestComment(commentContent);
+            tl.debug(`Added PR comment: ${commentContent.substring(0, 50)}...`);
+            return true;
+        } catch (error) {
+            tl.warning(`Failed to add PR comment: ${error instanceof Error ? error.message : String(error)}`);
+            return false;
+        }
+    }
 }
 
 class GitSubmoduleChecker {
@@ -324,6 +500,36 @@ class GitSubmoduleChecker {
     }
 }
 
+function createPullRequestCommentContent(submodule: SubmoduleInfo): string {
+    const currentCommitWithTags = submodule.currentCommit;
+    const latestCommitWithTags = submodule.latestCommit;
+    
+    return `⚠ Submodule needs update:\n[${submodule.path}](${submodule.url}): ${currentCommitWithTags} → ${latestCommitWithTags}`;
+}
+
+async function addPullRequestCommentsForOutdatedSubmodules(results: SubmoduleInfo[], azDoApi: AzureDevOpsApi): Promise<void> {
+    const outdatedSubmodules = results.filter(r => r.needsUpdate);
+    
+    if (outdatedSubmodules.length === 0) {
+        console.log('✅ No submodules need updating - no PR comments required');
+        tl.debug('No outdated submodules found, no PR comments to add');
+        return;
+    }
+
+    console.log(`💬 Adding PR comments for ${outdatedSubmodules.length} outdated submodule(s)...`);
+
+    for (const submodule of outdatedSubmodules) {
+        const commentContent = createPullRequestCommentContent(submodule);
+        const added = await azDoApi.addPullRequestCommentIfNotExists(commentContent);
+        
+        if (added) {
+            console.log(`  ✅ Added PR comment for ${submodule.path}`);
+        } else {
+            console.log(`  ℹ️ PR comment already exists for ${submodule.path}`);
+        }
+    }
+}
+
 async function run(): Promise<void> {
     try {
         // Get task inputs
@@ -331,10 +537,27 @@ async function run(): Promise<void> {
         const gitmodulesPath = tl.getInput('gitmodulesPath') || '.gitmodules';
         const defaultBranch = tl.getInput('defaultBranch') || 'main';
         const failOnOutdated = tl.getBoolInput('failOnOutdated') || false;
-        tl.debug(`Task inputs - workingDirectory: ${workingDirectory}, gitmodulesPath: ${gitmodulesPath}, defaultBranch: ${defaultBranch}, failOnOutdated: ${failOnOutdated}`);
+        const addPullRequestComments = tl.getBoolInput('addPullRequestComments') ?? true;
+        tl.debug(`Task inputs - workingDirectory: ${workingDirectory}, gitmodulesPath: ${gitmodulesPath}, defaultBranch: ${defaultBranch}, failOnOutdated: ${failOnOutdated}, addPullRequestComments: ${addPullRequestComments}`);
 
         const checker = new GitSubmoduleChecker(workingDirectory, gitmodulesPath, defaultBranch);
         const results = await checker.checkSubmodules();
+
+        // Add PR comments if enabled and in a pull request build
+        console.log(`💬 Add Pull Request Comments: ${addPullRequestComments}`);
+        if (addPullRequestComments) {
+            try {
+                const azDoApi = new AzureDevOpsApi();
+                if (azDoApi.isPullRequest()) {
+                    await addPullRequestCommentsForOutdatedSubmodules(results, azDoApi);
+                } else {
+                    console.log(`ℹ️  Build reason (${process.env.BUILD_REASON || 'unknown'}) indicates this is not a Pull Request - no PR to add comments to`);
+                    tl.debug('Not running in a Pull Request build, skipping PR comments');
+                }
+            } catch (error) {
+                tl.warning(`Failed to add PR comments: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        }
 
         // Check if we should fail the task
         const needsUpdateCount = results.filter(r => r.needsUpdate).length;

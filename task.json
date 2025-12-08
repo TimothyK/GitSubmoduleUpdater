@@ -55,6 +55,15 @@
       "required": false,
       "helpMarkDown": "If true, the task will fail if any submodules are found to be outdated.",
       "groupName": "advanced"
+    },
+    {
+      "name": "addPullRequestComments",
+      "type": "boolean",
+      "label": "Add Pull Request Comments",
+      "defaultValue": "true",
+      "required": false,
+      "helpMarkDown": "If true, add comments to the pull request for each submodule that needs updating (only when running in a Pull Request build).",
+      "groupName": "advanced"
     }
   ],
   "outputVariables": [
