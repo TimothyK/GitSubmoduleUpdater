@@ -1,0 +1,95 @@
+name: Release and Publish
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v1.0.0, v1.2.3, etc.
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Extract version from tag
+      id: version
+      run: |
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        VERSION=${TAG_NAME#v}  # Remove 'v' prefix
+        echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Publishing version: $VERSION"
+
+    - name: Update version in manifests
+      run: |
+        echo "Updating vss-extension.json to version ${{ steps.version.outputs.version }}"
+        sed -i 's/"version": "0.0.0"/"version": "${{ steps.version.outputs.version }}"/' vss-extension.json
+        
+        # Update task.json version parts
+        MAJOR=$(echo "${{ steps.version.outputs.version }}" | cut -d. -f1)
+        MINOR=$(echo "${{ steps.version.outputs.version }}" | cut -d. -f2)  
+        PATCH=$(echo "${{ steps.version.outputs.version }}" | cut -d. -f3)
+        
+        echo "Updating task.json to Major: $MAJOR, Minor: $MINOR, Patch: $PATCH"
+        sed -i "s/\"Major\": [0-9]*/\"Major\": $MAJOR/" task.json
+        sed -i "s/\"Minor\": [0-9]*/\"Minor\": $MINOR/" task.json
+        sed -i "s/\"Patch\": [0-9]*/\"Patch\": $PATCH/" task.json
+
+    - name: Verify version updates
+      run: |
+        echo "=== vss-extension.json version ==="
+        grep -A1 -B1 '"version"' vss-extension.json
+        echo ""
+        echo "=== task.json version ==="
+        grep -A3 -B1 '"version"' task.json
+
+    - name: Build TypeScript
+      run: npm run build
+
+    - name: Package extension
+      run: npm run package
+
+    - name: Publish to Visual Studio Marketplace
+      env:
+        AZURE_DEVOPS_EXT_PAT: ${{ secrets.AZURE_DEVOPS_EXT_PAT }}
+      run: |
+        if [ -z "$AZURE_DEVOPS_EXT_PAT" ]; then
+          echo "❌ AZURE_DEVOPS_EXT_PAT secret not set"
+          echo "Please add your Azure DevOps Personal Access Token to repository secrets"
+          exit 1
+        fi
+        
+        echo "🚀 Publishing to Visual Studio Marketplace..."
+        npx tfx extension publish --token "$AZURE_DEVOPS_EXT_PAT"
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: '*.vsix'
+        generate_release_notes: true
+        draft: false
+        prerelease: ${{ contains(steps.version.outputs.tag, '-') }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Post-release summary
+      run: |
+        echo "✅ Release ${{ steps.version.outputs.tag }} completed successfully!"
+        echo ""
+        echo "📦 Extension published to Visual Studio Marketplace"
+        echo "🏷️ GitHub release created with artifacts"
+        echo "📊 Package details:"
+        ls -la *.vsix

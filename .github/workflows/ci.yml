@@ -17,6 +17,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Needed for version calculation
 
     - name: Setup Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
@@ -26,6 +28,40 @@ jobs:
 
     - name: Install dependencies
       run: npm ci
+
+    - name: Calculate version
+      if: matrix.node-version == '20.x'
+      id: version
+      run: |
+        # Get the latest tag, or default to v0.0.0 if no tags exist
+        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        echo "Latest tag: $LATEST_TAG"
+        
+        # Remove 'v' prefix and split version parts
+        VERSION=${LATEST_TAG#v}
+        IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+        
+        # Increment patch version for automated builds
+        NEW_PATCH=$((PATCH + 1))
+        NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+        
+        echo "New version: $NEW_VERSION"
+        echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Update version in manifests
+      if: matrix.node-version == '20.x'
+      run: |
+        # Update vss-extension.json
+        sed -i 's/"version": "0.0.0"/"version": "${{ steps.version.outputs.version }}"/' vss-extension.json
+        
+        # Update task.json version
+        MAJOR=$(echo "${{ steps.version.outputs.version }}" | cut -d. -f1)
+        MINOR=$(echo "${{ steps.version.outputs.version }}" | cut -d. -f2)  
+        PATCH=$(echo "${{ steps.version.outputs.version }}" | cut -d. -f3)
+        
+        sed -i "s/\"Major\": [0-9]*/\"Major\": $MAJOR/" task.json
+        sed -i "s/\"Minor\": [0-9]*/\"Minor\": $MINOR/" task.json
+        sed -i "s/\"Patch\": [0-9]*/\"Patch\": $PATCH/" task.json
 
     - name: Build TypeScript
       run: npm run build
@@ -37,7 +73,7 @@ jobs:
       uses: actions/upload-artifact@v4
       if: matrix.node-version == '20.x'
       with:
-        name: extension-package
+        name: extension-package-${{ steps.version.outputs.version || 'dev' }}
         path: '*.vsix'
         retention-days: 30
 

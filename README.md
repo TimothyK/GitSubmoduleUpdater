@@ -1,7 +1,9 @@
 # Git Submodule Updater for Azure DevOps
 
 [![CI Build](https://github.com/TimothyK/GitSubmoduleUpdater/actions/workflows/ci.yml/badge.svg)](https://github.com/TimothyK/GitSubmoduleUpdater/actions/workflows/ci.yml)
+[![Release](https://github.com/TimothyK/GitSubmoduleUpdater/actions/workflows/release.yml/badge.svg)](https://github.com/TimothyK/GitSubmoduleUpdater/actions/workflows/release.yml)
 [![Marketplace Version](https://vsmarketplacebadge.apphb.com/version/CodeMonkeyProjectiles.git-submodule-updater.svg)](https://marketplace.visualstudio.com/items?itemName=CodeMonkeyProjectiles.git-submodule-updater)
+[![GitHub Release](https://img.shields.io/github/v/release/TimothyK/GitSubmoduleUpdater)](https://github.com/TimothyK/GitSubmoduleUpdater/releases)
 
 An Azure DevOps pipeline task that automatically checks your git submodules and determines which ones need updating to their latest commits.
 
@@ -32,6 +34,7 @@ steps:
 
 - **[Overview](overview.md)** - Comprehensive features and usage guide
 - **[Development Guide](DEVELOPMENT.md)** - Setup, testing, and contribution instructions
+- **[Publishing Guide](PUBLISHING.md)** - Automated release and marketplace publishing setup
 
 ## 🏃‍♂️ Example Pipeline
 

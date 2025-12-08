@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "id": "git-submodule-updater",
   "name": "Git Submodule Updater",
-  "version": "1.0.2",
+  "version": "0.0.0",
   "publisher": "CodeMonkeyProjectiles",
   "description": "Azure DevOps pipeline task to check git submodules and determine which ones need updating to the latest commits",
   "public": true,
