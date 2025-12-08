@@ -21,12 +21,6 @@ npm install
 
 # Build the project
 npm run build
-
-# Run tests
-npm test
-
-# Lint the code
-npm run lint
 ```
 
 ## 🏗️ Project Structure
@@ -39,18 +33,12 @@ npm run lint
 ├── task.json             # Azure DevOps task manifest
 ├── vss-extension.json    # VS Marketplace extension manifest
 ├── package.json          # Node.js package configuration
-├── tsconfig.json         # TypeScript configuration
-├── jest.config.js        # Test configuration
-└── .eslintrc.js          # Linting configuration
+└── tsconfig.json         # TypeScript configuration
 ```
 
 ## 🧪 Testing
 
-### Unit Tests
-
-```bash
-npm test
-```
+Currently no automated tests are configured. Manual testing should be done using the debugging setup described below.
 
 ### Local Testing
 
@@ -140,8 +128,7 @@ npm run package
    ```bash
    npm run clean
    npm run build
-   npm test
-   npm run lint
+
    ```
 
 3. **Package Extension**:
@@ -252,8 +239,7 @@ node dist/index.js
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
 3. Make your changes
 4. Add tests for new functionality
-5. Run the test suite: `npm test`
-6. Lint your code: `npm run lint`
+
 7. Commit changes: `git commit -m 'Add amazing feature'`
 8. Push to branch: `git push origin feature/amazing-feature`
 9. Create a Pull Request
@@ -261,16 +247,8 @@ node dist/index.js
 ### Code Style
 
 - Use TypeScript strict mode
-- Follow ESLint configuration
+
 - Add JSDoc comments for public methods
 - Write unit tests for new features
 - Update documentation for user-facing changes
 
-## 📋 TODO
-
-- [ ] Add support for private repositories with authentication
-- [ ] Implement caching for remote commit lookups
-- [ ] Add option to check specific submodules only
-- [ ] Support for different authentication methods
-- [ ] Integration tests with real repositories
-- [ ] Performance optimization for large numbers of submodules

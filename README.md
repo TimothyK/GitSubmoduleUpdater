@@ -1,6 +1,6 @@
 # Git Submodule Updater for Azure DevOps
 
-[![Build Status](https://dev.azure.com/timothyk/GitSubmoduleUpdater/_apis/build/status/GitSubmoduleUpdater-CI?branchName=main)](https://dev.azure.com/timothyk/GitSubmoduleUpdater/_build/latest?definitionId=1&branchName=main)
+[![CI Build](https://github.com/TimothyK/GitSubmoduleUpdater/actions/workflows/ci.yml/badge.svg)](https://github.com/TimothyK/GitSubmoduleUpdater/actions/workflows/ci.yml)
 [![Marketplace Version](https://vsmarketplacebadge.apphb.com/version/TimothyK.git-submodule-updater.svg)](https://marketplace.visualstudio.com/items?itemName=TimothyK.git-submodule-updater)
 
 An Azure DevOps pipeline task that automatically checks your git submodules and determines which ones need updating to their latest commits.
@@ -94,10 +94,6 @@ The task provides these pipeline variables:
 # Setup
 npm install
 npm run build
-
-# Testing  
-npm test
-npm run lint
 
 # Publishing
 npm run package
