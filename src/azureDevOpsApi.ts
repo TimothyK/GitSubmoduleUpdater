@@ -127,7 +127,12 @@ export class AzureDevOpsApi {
         }
 
         const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullRequests/${this.environment.pullRequestId}/threads?api-version=6.0`;
-        return await this.makeApiCall(queryString);
+        try {
+            return await this.makeApiCall(queryString);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to get PR comments: ${errorMessage}`);
+        }
     }
 
     public async addPullRequestComment(commentContent: string): Promise<void> {
@@ -147,12 +152,18 @@ export class AzureDevOpsApi {
         });
 
         const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullRequests/${this.environment.pullRequestId}/threads?api-version=6.0`;
-        await this.makeApiCall(queryString, 'POST', body);
+        try {
+            await this.makeApiCall(queryString, 'POST', body);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to add PR comment: ${errorMessage}`);
+        }
     }
 
     public async addPullRequestCommentIfNotExists(commentContent: string): Promise<boolean> {
         try {
             // Get existing comments
+            tl.debug('Checking for existing PR comments...');
             const commentsResponse = await this.getPullRequestComments();
             
             // Check if comment already exists
@@ -166,11 +177,26 @@ export class AzureDevOpsApi {
             }
 
             // Add the comment
+            tl.debug('Adding new PR comment...');
             await this.addPullRequestComment(commentContent);
             tl.debug(`Added PR comment: ${commentContent.substring(0, 50)}...`);
             return true;
         } catch (error) {
-            tl.warning(`Failed to add PR comment: ${error instanceof Error ? error.message : String(error)}`);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            
+            // Check for specific permission-related errors
+            if (errorMessage.includes('403') || errorMessage.includes('Forbidden') || errorMessage.includes('Access Denied')) {
+                console.error(`❌ Permission denied: Unable to access pull request comments. Please check your Azure DevOps Personal Access Token permissions.`);
+                console.error(`Required permissions: Code (read) and Pull requests (read/write)`);
+            } else if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+                console.error(`❌ Authentication failed: Invalid or missing Azure DevOps Personal Access Token.`);
+            } else if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+                console.error(`❌ Pull request not found: Unable to locate the pull request or repository.`);
+            } else {
+                console.error(`❌ Failed to manage PR comments: ${errorMessage}`);
+            }
+            
+            tl.warning(`Failed to add PR comment: ${errorMessage}`);
             return false;
         }
     }

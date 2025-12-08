@@ -24,7 +24,8 @@
     }
   ],
   "scopes": [
-    "vso.build_execute"
+    "vso.code.read",
+    "vso.code.write"
   ],
   "icons": {
     "default": "assets/logo.png",
