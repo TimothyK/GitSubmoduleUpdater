@@ -22,6 +22,22 @@
   ],
   "inputs": [
     {
+      "name": "failOnOutdated",
+      "type": "boolean",
+      "label": "Fail if submodules are outdated",
+      "defaultValue": "false",
+      "required": false,
+      "helpMarkDown": "If true, the task will fail if any submodules are found to be outdated."
+    },
+    {
+      "name": "addPullRequestComments",
+      "type": "boolean",
+      "label": "Add Pull Request Comments",
+      "defaultValue": "true",
+      "required": false,
+      "helpMarkDown": "If true, add comments to the pull request for each submodule that needs updating (only when running in a Pull Request build)."
+    },
+    {
       "name": "workingDirectory",
       "type": "filePath",
       "label": "Working Directory",
@@ -47,22 +63,6 @@
       "required": false,
       "helpMarkDown": "The default branch name to check for latest commits on submodule repos (e.g., 'main', 'master', 'develop').",
       "groupName": "advanced"
-    },
-    {
-      "name": "failOnOutdated",
-      "type": "boolean",
-      "label": "Fail if submodules are outdated",
-      "defaultValue": "false",
-      "required": false,
-      "helpMarkDown": "If true, the task will fail if any submodules are found to be outdated."
-    },
-    {
-      "name": "addPullRequestComments",
-      "type": "boolean",
-      "label": "Add Pull Request Comments",
-      "defaultValue": "true",
-      "required": false,
-      "helpMarkDown": "If true, add comments to the pull request for each submodule that needs updating (only when running in a Pull Request build)."
     }
   ],
   "outputVariables": [
