@@ -117,6 +117,56 @@
       "packagePath": "GitSubmoduleUpdater/node_modules/brace-expansion"
     },
     {
+      "path": "node_modules/uuid",
+      "addressable": true,
+      "packagePath": "GitSubmoduleUpdater/node_modules/uuid"
+    },
+    {
+      "path": "node_modules/underscore",
+      "addressable": true,
+      "packagePath": "GitSubmoduleUpdater/node_modules/underscore"
+    },
+    {
+      "path": "node_modules/mkdirp",
+      "addressable": true,
+      "packagePath": "GitSubmoduleUpdater/node_modules/mkdirp"
+    },
+    {
+      "path": "node_modules/adm-zip",
+      "addressable": true,
+      "packagePath": "GitSubmoduleUpdater/node_modules/adm-zip"
+    },
+    {
+      "path": "node_modules/q",
+      "addressable": true,
+      "packagePath": "GitSubmoduleUpdater/node_modules/q"
+    },
+    {
+      "path": "node_modules/shelljs",
+      "addressable": true,
+      "packagePath": "GitSubmoduleUpdater/node_modules/shelljs"
+    },
+    {
+      "path": "node_modules/nodejs-file-downloader",
+      "addressable": true,
+      "packagePath": "GitSubmoduleUpdater/node_modules/nodejs-file-downloader"
+    },
+    {
+      "path": "node_modules/@kwsites",
+      "addressable": true,
+      "packagePath": "GitSubmoduleUpdater/node_modules/@kwsites"
+    },
+    {
+      "path": "node_modules/debug",
+      "addressable": true,
+      "packagePath": "GitSubmoduleUpdater/node_modules/debug"
+    },
+    {
+      "path": "node_modules/ms",
+      "addressable": true,
+      "packagePath": "GitSubmoduleUpdater/node_modules/ms"
+    },
+    {
       "path": "assets",
       "addressable": true,
       "packagePath": "assets"
