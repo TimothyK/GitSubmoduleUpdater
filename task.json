@@ -27,7 +27,8 @@
       "label": "Working Directory",
       "defaultValue": "$(System.DefaultWorkingDirectory)",
       "required": false,
-      "helpMarkDown": "The directory containing the .gitmodules file. Defaults to the repository root."
+      "helpMarkDown": "The directory containing the .gitmodules file. Defaults to the repository root.",
+      "groupName": "advanced"
     },
     {
       "name": "gitmodulesPath",
@@ -53,8 +54,7 @@
       "label": "Fail if submodules are outdated",
       "defaultValue": "false",
       "required": false,
-      "helpMarkDown": "If true, the task will fail if any submodules are found to be outdated.",
-      "groupName": "advanced"
+      "helpMarkDown": "If true, the task will fail if any submodules are found to be outdated."
     },
     {
       "name": "addPullRequestComments",
@@ -62,8 +62,7 @@
       "label": "Add Pull Request Comments",
       "defaultValue": "true",
       "required": false,
-      "helpMarkDown": "If true, add comments to the pull request for each submodule that needs updating (only when running in a Pull Request build).",
-      "groupName": "advanced"
+      "helpMarkDown": "If true, add comments to the pull request for each submodule that needs updating (only when running in a Pull Request build)."
     }
   ],
   "outputVariables": [
