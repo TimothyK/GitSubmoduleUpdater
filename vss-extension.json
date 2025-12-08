@@ -3,9 +3,9 @@
   "id": "git-submodule-updater",
   "name": "Git Submodule Updater",
   "version": "1.0.0",
-  "publisher": "TimothyK",
+  "publisher": "CodeMonkeyProjectiles",
   "description": "Azure DevOps pipeline task to check git submodules and determine which ones need updating to the latest commits",
-  "public": false,
+  "public": true,
   "categories": [
     "Azure Pipelines"
   ],
