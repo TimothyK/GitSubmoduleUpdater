@@ -11,6 +11,7 @@ An Azure DevOps pipeline task that automatically checks your git submodules and 
 - **Smart Commit Comparison**: Compares current commits with latest remote commits
 - **Flexible Branch Support**: Check against any branch (main, master, develop, etc.)  
 - **Rich Pipeline Integration**: Sets output variables for conditional pipeline steps
+- **Pull Request Integration**: Automatically adds comments to PRs for outdated submodules
 - **Detailed Logging**: Clear status indicators and comprehensive summary reports
 - **Error Resilience**: Graceful handling of network issues and repository problems
 
@@ -24,6 +25,7 @@ steps:
   displayName: 'Check Git Submodules'
   inputs:
     failOnOutdated: false
+    addPullRequestComments: true
 ```
 
 ## 📖 Documentation
@@ -49,6 +51,7 @@ steps:
   inputs:
     workingDirectory: '$(System.DefaultWorkingDirectory)'
     failOnOutdated: false
+    addPullRequestComments: true
 
 - script: |
     echo "📊 Submodule Status:"
@@ -77,11 +80,12 @@ The task provides these pipeline variables:
 ## 🔧 Configuration
 
 | Input | Description | Default |
-|-------|-------------|---------|
+|-------|-------------|----------|
 | `workingDirectory` | Repository root directory | `$(System.DefaultWorkingDirectory)` |
 | `gitmodulesPath` | Path to .gitmodules file | `.gitmodules` |
 | `defaultBranch` | Branch to check for latest commits on submodule repos | `main` |
 | `failOnOutdated` | Fail task if submodules are outdated | `false` |
+| `addPullRequestComments` | Add comments to pull requests for outdated submodules | `true` |
 
 
 ## 🛠️ Development
@@ -133,6 +137,10 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development instructions.
 
 ⚠️  SUBMODULES NEEDING UPDATES:
    • libs/common: a1b2c3d4 (v1.5.2) → x1y2z3a4 (v2.0.0, v2.0.0-rc1)
+
+💬 Add Pull Request Comments: true
+💬 Adding PR comments for 1 outdated submodule(s)...
+  ✅ Added PR comment for libs/common
 ```
 
 ## 🤝 Contributing
