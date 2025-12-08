@@ -47,8 +47,8 @@ The project includes two GitHub Actions workflows:
 
 #### Option A: Manual Tag Creation
 ```bash
-# Create and push a version tag
-git tag v1.2.3
+# Create an annotated version tag
+git tag -a v1.2.3 -m "Release v1.2.3"
 git push origin v1.2.3
 ```
 
