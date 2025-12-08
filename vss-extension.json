@@ -27,7 +27,8 @@
     "vso.build_execute"
   ],
   "icons": {
-    "default": "assets/logo.png"
+    "default": "assets/logo.png",
+    "large": "assets/logo.png"
   },
   "screenshots": [
     {
@@ -81,6 +82,11 @@
       "path": "task.json",
       "addressable": true,
       "packagePath": "GitSubmoduleUpdater/task.json"
+    },
+    {
+      "path": "icon.png",
+      "addressable": true,
+      "packagePath": "GitSubmoduleUpdater/icon.png"
     },
     {
       "path": "dist",
