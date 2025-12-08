@@ -23,10 +23,7 @@
       "id": "Microsoft.VisualStudio.Services"
     }
   ],
-  "scopes": [
-    "vso.code.read",
-    "vso.code.write"
-  ],
+
   "icons": {
     "default": "assets/logo.png",
     "large": "assets/logo.png"
