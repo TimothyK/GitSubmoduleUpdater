@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "id": "git-submodule-updater",
   "name": "Git Submodule Updater",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "publisher": "CodeMonkeyProjectiles",
   "description": "Azure DevOps pipeline task to check git submodules and determine which ones need updating to the latest commits",
   "public": true,
@@ -72,28 +72,30 @@
         "ms.vss-distributed-task.tasks"
       ],
       "properties": {
-        "name": "."
+        "name": "GitSubmoduleUpdater"
       }
     }
   ],
   "files": [
     {
-      "path": "task.json"
+      "path": "task.json",
+      "addressable": true,
+      "packagePath": "GitSubmoduleUpdater/task.json"
     },
     {
       "path": "dist",
       "addressable": true,
-      "packagePath": "dist"
+      "packagePath": "GitSubmoduleUpdater/dist"
     },
     {
       "path": "node_modules/azure-pipelines-task-lib",
       "addressable": true,
-      "packagePath": "node_modules/azure-pipelines-task-lib"
+      "packagePath": "GitSubmoduleUpdater/node_modules/azure-pipelines-task-lib"
     },
     {
       "path": "node_modules/simple-git",
       "addressable": true,
-      "packagePath": "node_modules/simple-git"
+      "packagePath": "GitSubmoduleUpdater/node_modules/simple-git"
     },
     {
       "path": "assets",
