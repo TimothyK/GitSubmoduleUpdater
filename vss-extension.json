@@ -102,6 +102,21 @@
       "packagePath": "GitSubmoduleUpdater/node_modules/simple-git"
     },
     {
+      "path": "node_modules/concat-map",
+      "addressable": true,
+      "packagePath": "GitSubmoduleUpdater/node_modules/concat-map"
+    },
+    {
+      "path": "node_modules/balanced-match",
+      "addressable": true,
+      "packagePath": "GitSubmoduleUpdater/node_modules/balanced-match"
+    },
+    {
+      "path": "node_modules/brace-expansion",
+      "addressable": true,
+      "packagePath": "GitSubmoduleUpdater/node_modules/brace-expansion"
+    },
+    {
       "path": "assets",
       "addressable": true,
       "packagePath": "assets"
