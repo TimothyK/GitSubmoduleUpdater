@@ -63,6 +63,15 @@
       "required": false,
       "helpMarkDown": "The default branch name to check for latest commits on submodule repos (e.g., 'main', 'master', 'develop').",
       "groupName": "advanced"
+    },
+    {
+      "name": "accessToken",
+      "type": "string",
+      "label": "Access Token (Optional)",
+      "defaultValue": "",
+      "required": false,
+      "helpMarkDown": "Optional: Azure DevOps access token for PR comments. If not provided, the task will use the system token automatically. Only needed in special authentication scenarios.",
+      "groupName": "advanced"
     }
   ],
   "outputVariables": [

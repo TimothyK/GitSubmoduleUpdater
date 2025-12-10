@@ -39,19 +39,24 @@ export class AzureDevOpsApi {
             buildReason: process.env.BUILD_REASON || '',
             pullRequestId: process.env.SYSTEM_PULLREQUEST_PULLREQUESTID,
             systemAccessToken: process.env.SYSTEM_ACCESSTOKEN,
-            myAccessToken: process.env.MY_ACCESSTOKEN
+            myAccessToken: tl.getInput('accessToken', false) || process.env.MY_ACCESSTOKEN
         };
     }
 
     private getAuthorizationHeaders(): { [key: string]: string } {
-        if (this.environment.myAccessToken) {
+        // Try Azure DevOps task library token first (automatically available)
+        const taskLibToken = tl.getEndpointAuthorizationParameter('SYSTEMVSSCONNECTION', 'AccessToken', false);
+        
+        if (taskLibToken) {
+            return { 'Authorization': `Bearer ${taskLibToken}` };
+        } else if (this.environment.myAccessToken) {
             const pair = `:${this.environment.myAccessToken}`;
             const encodedCreds = Buffer.from(pair).toString('base64');
             return { 'Authorization': `Basic ${encodedCreds}` };
         } else if (this.environment.systemAccessToken) {
             return { 'Authorization': `Bearer ${this.environment.systemAccessToken}` };
         } else {
-            throw new Error('No access token available for Azure DevOps API');
+            throw new Error('No access token available for Azure DevOps API. Consider adding "SYSTEM_ACCESSTOKEN: $(System.AccessToken)" to your task environment variables.');
         }
     }
 
