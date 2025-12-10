@@ -80,6 +80,113 @@ export INPUT_WORKINGDIRECTORY="$(pwd)"
 node /path/to/GitSubmoduleUpdater/dist/index.js
 ```
 
+### Testing with Azure DevOps
+
+To test the full functionality including PR comment creation, you need to test within an actual Azure DevOps environment:
+
+#### Prerequisites
+
+1. **Azure DevOps Organization**: Set up a test organization
+2. **Test Repository**: Create a repository with submodules in Azure DevOps
+3. **Personal Access Token**: Create a PAT with appropriate permissions
+
+#### Setting Up Personal Access Token
+
+1. Go to your Azure DevOps organization → User Settings → Personal Access Tokens
+2. Create a new token with these scopes:
+   - **Code (read)** - Required to read repository and PR information
+   - **Code (write)** - Required to add PR comments
+   - **Pull Request (read & write)** - Required for PR operations
+3. Copy the token value (you won't see it again)
+
+#### Required Environment Variables
+
+When testing in Azure DevOps pipelines, ensure these environment variables are set:
+
+```yaml
+# In your azure-pipelines.yml test pipeline
+- task: GitSubmoduleUpdater@1
+  displayName: 'Test Git Submodules'
+  inputs:
+    addPullRequestComments: true
+  env:
+    # Optional: Explicit token (usually not needed due to automatic token detection)
+    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+    
+    # For debugging/development only
+    SYSTEM_DEBUG: true
+    AGENT_VERBOSE: true
+```
+
+#### Testing PR Comment Functionality
+
+1. **Create a Pull Request** in your test repository
+2. **Ensure submodules are outdated** (commit older versions)
+3. **Run the pipeline** on the PR branch
+4. **Verify PR comments** are added for each outdated submodule
+
+#### Manual Testing Environment Variables
+
+For local debugging that simulates Azure DevOps environment:
+
+```bash
+# Required Azure DevOps context
+export SYSTEM_TEAMFOUNDATIONSERVERURI="https://dev.azure.com/YourOrg/"
+export SYSTEM_TEAMPROJECTID="YourProjectId"
+export BUILD_REPOSITORY_NAME="YourRepoName"
+export BUILD_REASON="PullRequest"
+export SYSTEM_PULLREQUEST_PULLREQUESTID="123"
+
+# Authentication - Choose ONE of the following:
+
+# Option 1: Personal Access Token (for local development)
+# Uses Basic authentication with base64 encoding
+export MY_ACCESSTOKEN="your-personal-access-token-here"
+
+# Option 2: System Access Token (Azure DevOps pipeline context)
+# Uses Bearer authentication - typically provided by Azure DevOps automatically
+export SYSTEM_ACCESSTOKEN="your-bearer-token-here"
+
+# Task inputs
+export INPUT_WORKINGDIRECTORY="/path/to/your/repo"
+export INPUT_ADDPULLREQUESTCOMMENTS="true"
+export INPUT_FAILONOUTDATED="false"
+
+# Debug settings
+export SYSTEM_DEBUG="true"
+export AGENT_VERBOSE="true"
+```
+
+#### Authentication Methods Explained
+
+The task supports multiple authentication methods with different token formats:
+
+1. **Azure DevOps Service Connection Token** (Automatic)
+   - **Format**: Bearer token
+   - **Usage**: Automatically obtained in Azure DevOps pipelines
+   - **Authentication**: `Authorization: Bearer <token>`
+
+2. **Personal Access Token** (`MY_ACCESSTOKEN`)
+   - **Format**: Personal Access Token from Azure DevOps
+   - **Usage**: Local development and manual testing
+   - **Authentication**: `Authorization: Basic <base64-encoded-credentials>`
+   - **Encoding**: Base64 encoding of `:${token}`
+
+3. **System Access Token** (`SYSTEM_ACCESSTOKEN`)
+   - **Format**: Bearer token provided by Azure DevOps
+   - **Usage**: Pipeline context when explicitly passed
+   - **Authentication**: `Authorization: Bearer <token>`
+
+#### Troubleshooting
+
+- **403/401 Errors**: Check PAT permissions and expiration
+- **PR Not Found**: Verify `SYSTEM_PULLREQUEST_PULLREQUESTID` is correct
+- **No Comments Added**: Ensure `BUILD_REASON="PullRequest"` is set
+- **Token Format Issues**: 
+  - Use `MY_ACCESSTOKEN` for Personal Access Tokens (Basic auth)
+  - Use `SYSTEM_ACCESSTOKEN` for Bearer tokens from Azure DevOps
+- **Authentication Errors**: Check console output for specific error details
+
 ## 🔨 Build Process
 
 ### TypeScript Compilation
@@ -105,6 +212,7 @@ npm run package
 ```
 
 ## 📦 Publishing
+- **[Publishing Guide](PUBLISHING.md)** - Automated release and marketplace publishing setup
 
 ### Prerequisites
 
