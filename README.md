@@ -5,27 +5,33 @@
 [![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/CodeMonkeyProjectiles.git-submodule-updater?label=VS%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=CodeMonkeyProjectiles.git-submodule-updater)
 [![GitHub Release](https://img.shields.io/github/v/release/TimothyK/GitSubmoduleUpdater)](https://github.com/TimothyK/GitSubmoduleUpdater/releases)
 
-An Azure DevOps pipeline task that automatically checks your git submodules and determines which ones need updating to their latest commits.
+A powerful Azure DevOps pipeline task that automatically checks your git submodules and determines which ones need updating to their latest commits.
 
 ## 🚀 Features
 
-- **Automated Submodule Analysis**: Parses `.gitmodules` and checks all configured submodules
-- **Smart Commit Comparison**: Compares current commits with latest remote commits
-- **Flexible Branch Support**: Check against any branch (main, master, develop, etc.)  
-- **Rich Pipeline Integration**: Sets output variables for conditional pipeline steps
-- **Pull Request Integration**: Automatically adds comments to PRs for outdated submodules
-- **Detailed Logging**: Clear status indicators and comprehensive summary reports
-- **Error Resilience**: Graceful handling of network issues and repository problems
+- **Automated Submodule Analysis**: Parses your `.gitmodules` file and checks all configured submodules
+  - **Commit Comparison**: Compares current submodule commits with the latest commits on remote branches
+  - **Configurable Behavior**: Optional input to fail the build if submodules are outdated
+  - **Pipeline Integration**: Sets output variables for use in subsequent pipeline tasks
+  - **Flexible Branch Support**: If the submodule branch is not given in the `.gitmodules` file, the `main` branch is assumed.  But this can be overridden.
+- **Pull Request Integration**: Automatically adds comments to PRs highlighting outdated submodules
+  - **Hyperlinks**: The PR Comment has a hyperlink to the submodule.  Its release notes can be reviewed to check for breaking changes in the update.
+- **Core Features**
+  - **Rich Output**: Detailed logging with clear status indicators and summary reports
+  - **Error Handling**: Graceful handling of network issues and missing repositories
 
-## 📋 Quick Start
+## 📋 Usage
 
-Add to your `azure-pipelines.yml`:
+Add the Git Submodule Updater task to your `azure-pipelines.yml`:
 
 ```yaml
 steps:
 - task: GitSubmoduleUpdater@1
   displayName: 'Check Git Submodules'
   inputs:
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+    gitmodulesPath: '.gitmodules'
+    defaultBranch: 'main'
     failOnOutdated: false
     addPullRequestComments: true
 ```
@@ -34,61 +40,57 @@ steps:
 
 - **[Overview](overview.md)** - Comprehensive features and usage guide
 - **[Development Guide](DEVELOPMENT.md)** - Setup, testing, and contribution instructions
-- **[Publishing Guide](PUBLISHING.md)** - Automated release and marketplace publishing setup
 
-## 🏃‍♂️ Example Pipeline
+
+### Complete Example with Conditional Updates
 
 ```yaml
-trigger:
-- main
-
-pool:
-  vmImage: 'ubuntu-latest'
-
 steps:
+# Checkout with submodules
 - checkout: self
   submodules: true
 
+# Check submodule status
 - task: GitSubmoduleUpdater@1
-  displayName: 'Check Submodules'
+  displayName: 'Check Git Submodules'
   inputs:
-    workingDirectory: '$(System.DefaultWorkingDirectory)'
     failOnOutdated: false
     addPullRequestComments: true
 
+# Display results
 - script: |
-    echo "📊 Submodule Status:"
-    echo "Total: $(SubmodulesTotal)"
-    echo "Up to date: $(SubmodulesUpToDate)" 
+    echo "Total submodules: $(SubmodulesTotal)"
+    echo "Up to date: $(SubmodulesUpToDate)"
     echo "Need updating: $(SubmodulesNeedingUpdate)"
-    echo "Outdated: $(SubmodulesNeedingUpdateList)"
-  displayName: 'Display Results'
+    echo "Outdated submodules: $(SubmodulesNeedingUpdateList)"
+  displayName: 'Show Submodule Status'
 
+# Conditionally update outdated submodules
 - script: |
-    echo "🔄 Updating submodules..."
+    echo "Updating outdated submodules..."
     git submodule update --remote --merge
-  displayName: 'Update Submodules'
+  displayName: 'Update Outdated Submodules'
   condition: gt(variables['SubmodulesNeedingUpdate'], 0)
 ```
 
-## 🎯 Task Outputs
+## 📊 Output Variables
 
-The task provides these pipeline variables:
+The task sets these variables for use in subsequent tasks:
 
-- `SubmodulesTotal` - Total submodules found
-- `SubmodulesUpToDate` - Count of up-to-date submodules  
-- `SubmodulesNeedingUpdate` - Count of outdated submodules
-- `SubmodulesNeedingUpdateList` - Comma-separated list of outdated paths
+- `SubmodulesTotal` - Total number of submodules found
+- `SubmodulesUpToDate` - Number of submodules that are up to date  
+- `SubmodulesNeedingUpdate` - Number of submodules that need updating
+- `SubmodulesNeedingUpdateList` - Comma-separated list of outdated submodule paths
 
-## 🔧 Configuration
+## ⚙️ Task Inputs
 
-| Input | Description | Default |
-|-------|-------------|----------|
-| `workingDirectory` | Repository root directory | `$(System.DefaultWorkingDirectory)` |
-| `gitmodulesPath` | Path to .gitmodules file | `.gitmodules` |
-| `defaultBranch` | Branch to check for latest commits on submodule repos | `main` |
-| `failOnOutdated` | Fail task if submodules are outdated | `false` |
-| `addPullRequestComments` | Add comments to pull requests for outdated submodules | `true` |
+| Input | Description | Required | Default |
+|-------|-------------|----------|----------|
+| `failOnOutdated` | Fail the task if submodules are outdated | No | `false` |
+| `addPullRequestComments` | Add comments to pull requests for each outdated submodule | No | `true` |
+| `workingDirectory` | Directory containing the .gitmodules file | No | `$(System.DefaultWorkingDirectory)` |
+| `defaultBranch` | Default branch name to check for latest commits on submodule repos | No | `main` |
+| `gitmodulesPath` | Path to .gitmodules file relative to working directory | No | `.gitmodules` |
 
 
 ## 🛠️ Development
@@ -105,42 +107,63 @@ npm run publish
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development instructions.
 
-## 📊 Sample Output
+## 🔍 Sample Output
 
 ```
 🔍 Git Submodule Updater - Starting Analysis
-📁 Working Directory: /workspace
-📄 .gitmodules Path: /workspace/.gitmodules
+📁 Working Directory: D:\a\1\s
+📄 .gitmodules Path: D:\a\1\s\.gitmodules  
 🌿 Default Branch: main
 
-📦 Found 2 submodule(s) configured in .gitmodules
+📦 Found 3 submodule(s) configured in .gitmodules
 
-[1/2] Checking submodule: libs/common
-  📍 URL: https://github.com/myorg/common.git
-  📌 Current commit: a1b2c3d4 (v1.5.2)
-  🏷️  Latest commit: x1y2z3a4 (v2.0.0, v2.0.0-rc1)
+[1/3] Checking submodule: libs/common
+  📍 URL: https://github.com/myorg/common-lib.git
+  📌 Current commit: a1b2c3d4 (v1.8.5)
+  🏷️  Latest commit: x1y2z3a4 (v2.1.0, v2.0.8)
   ⚠️  Status: NEEDS UPDATE
 
-[2/2] Checking submodule: libs/utils  
-  📍 URL: https://github.com/myorg/utils.git
-  📌 Current commit: m3n4o5p6 (v3.1.0, v3.0.5 +2 more)
-  🏷️  Latest commit: m3n4o5p6 (v3.1.0, v3.0.5 +2 more)
+[2/3] Checking submodule: libs/utils
+  📍 URL: https://github.com/myorg/utils-lib.git
+  📌 Current commit: p9o8n7m6 (v4.2.1, v4.2.0 +1 more)
+  🏷️  Latest commit: p9o8n7m6 (v4.2.1, v4.2.0 +1 more)
+  ✅ Status: UP TO DATE
+
+[3/3] Checking submodule: vendor/third-party
+  📍 URL: https://github.com/external/library.git
+  📌 Current commit: m3n4o5p6 (v0.9.12)
+  🏷️  Latest commit: m3n4o5p6 (v0.9.12)
   ✅ Status: UP TO DATE
 
 📊 SUMMARY
 ══════════════════════════════════════════════════
-📦 Total submodules: 2
-✅ Up to date: 1  
+📦 Total submodules: 3
+✅ Up to date: 2
 ⚠️  Need updating: 1
 ❌ Errors: 0
 
 ⚠️  SUBMODULES NEEDING UPDATES:
-   • libs/common: a1b2c3d4 (v1.5.2) → x1y2z3a4 (v2.0.0, v2.0.0-rc1)
+   • libs/common: a1b2c3d4 (v1.8.5) → x1y2z3a4 (v2.1.0, v2.0.8)
+══════════════════════════════════════════════════
 
 💬 Add Pull Request Comments: true
 💬 Adding PR comments for 1 outdated submodule(s)...
   ✅ Added PR comment for libs/common
 ```
+
+## 🛠️ How It Works
+
+1. **Parse .gitmodules**: Reads your `.gitmodules` file to discover configured submodules
+2. **Get Current State**: Uses `git ls-tree` to find the commit currently referenced by your main repository
+3. **Check Remote**: Uses `git ls-remote` to find the latest commit on the specified branch of each submodule
+4. **Compare & Report**: Compares commits and provides detailed output with update recommendations
+
+## 🔧 Requirements
+
+- Azure DevOps Pipelines
+- Git repository with submodules configured in `.gitmodules`
+- Network access to submodule repositories
+- Agent with Git installed (standard on Microsoft-hosted agents)
 
 ## 🤝 Contributing
 
@@ -152,10 +175,12 @@ See [DEVELOPMENT.md](DEVELOPMENT.md) for detailed development instructions.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/TimothyK/GitSubmoduleUpdater/blob/main/LICENSE) file for details.
 
 ## 🆘 Support
 
-- 📝 [Report Issues](https://github.com/TimothyK/GitSubmoduleUpdater/issues)
-- 💡 [Request Features](https://github.com/TimothyK/GitSubmoduleUpdater/issues/new)
-- 📚 [View Documentation](https://github.com/TimothyK/GitSubmoduleUpdater/wiki)
+If you encounter issues or have feature requests:
+
+- 📋 [Report an Issue](https://github.com/TimothyK/GitSubmoduleUpdater/issues)
+- 💡 [Request a Feature](https://github.com/TimothyK/GitSubmoduleUpdater/issues/new)
+- 📖 [View Documentation](https://github.com/TimothyK/GitSubmoduleUpdater/blob/main/README.md)

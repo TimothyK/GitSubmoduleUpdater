@@ -5,13 +5,15 @@ A powerful Azure DevOps pipeline task that automatically checks your git submodu
 ## 🚀 Features
 
 - **Automated Submodule Analysis**: Parses your `.gitmodules` file and checks all configured submodules
-- **Commit Comparison**: Compares current submodule commits with the latest commits on remote branches
-- **Flexible Branch Support**: Check against any branch (main, master, develop, etc.)
-- **Rich Output**: Detailed logging with clear status indicators and summary reports
-- **Pipeline Integration**: Sets output variables for use in subsequent pipeline tasks
+  - **Commit Comparison**: Compares current submodule commits with the latest commits on remote branches
+  - **Configurable Behavior**: Optional input to fail the build if submodules are outdated
+  - **Pipeline Integration**: Sets output variables for use in subsequent pipeline tasks
+  - **Flexible Branch Support**: If the submodule branch is not given in the `.gitmodules` file, the `main` branch is assumed.  But this can be overridden.
 - **Pull Request Integration**: Automatically adds comments to PRs highlighting outdated submodules
-- **Error Handling**: Graceful handling of network issues and missing repositories
-- **Configurable Behavior**: Optional task failure when submodules are outdated
+  - **Hyperlinks**: The PR Comment has a hyperlink to the submodule.  Its release notes can be reviewed to check for breaking changes in the update.
+- **Core Features**
+  - **Rich Output**: Detailed logging with clear status indicators and summary reports
+  - **Error Handling**: Graceful handling of network issues and missing repositories
 
 ## 📋 Usage
 
@@ -64,11 +66,11 @@ steps:
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|----------|
-| `workingDirectory` | Directory containing the .gitmodules file | No | `$(System.DefaultWorkingDirectory)` |
-| `gitmodulesPath` | Path to .gitmodules file relative to working directory | No | `.gitmodules` |
-| `defaultBranch` | Default branch name to check for latest commits on submodule repos | No | `main` |
 | `failOnOutdated` | Fail the task if submodules are outdated | No | `false` |
 | `addPullRequestComments` | Add comments to pull requests for each outdated submodule | No | `true` |
+| `workingDirectory` | Directory containing the .gitmodules file | No | `$(System.DefaultWorkingDirectory)` |
+| `defaultBranch` | Default branch name to check for latest commits on submodule repos | No | `main` |
+| `gitmodulesPath` | Path to .gitmodules file relative to working directory | No | `.gitmodules` |
 
 
 ## 📊 Output Variables
@@ -117,6 +119,7 @@ The task sets these variables for use in subsequent tasks:
 
 ⚠️  SUBMODULES NEEDING UPDATES:
    • libs/common: a1b2c3d4 (v1.8.5) → x1y2z3a4 (v2.1.0, v2.0.8)
+══════════════════════════════════════════════════
 
 💬 Add Pull Request Comments: true
 💬 Adding PR comments for 1 outdated submodule(s)...
