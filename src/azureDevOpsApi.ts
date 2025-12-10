@@ -45,7 +45,13 @@ export class AzureDevOpsApi {
 
     private getAuthorizationHeaders(): { [key: string]: string } {
         // Try Azure DevOps task library token first (automatically available)
-        const taskLibToken = tl.getEndpointAuthorizationParameter('SYSTEMVSSCONNECTION', 'AccessToken', false);
+        let taskLibToken: string | null = null;
+        try {
+            taskLibToken = tl.getEndpointAuthorizationParameter('SYSTEMVSSCONNECTION', 'AccessToken', false) || null;
+        } catch (error) {
+            // This will fail in local debug mode, which is expected
+            tl.debug('Azure DevOps service connection token not available (likely running in debug mode)');
+        }
         
         if (taskLibToken) {
             return { 'Authorization': `Bearer ${taskLibToken}` };
