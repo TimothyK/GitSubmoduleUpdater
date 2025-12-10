@@ -290,24 +290,27 @@ class GitSubmoduleChecker {
         console.log(`✅ Up to date: ${upToDate}`);
         console.log(`⚠️  Need updating: ${needsUpdate}`);
         console.log(`❌ Errors: ${errors}`);
-        console.log('');
         
         if (needsUpdate > 0) {
+            console.log('');
             console.log('⚠️  SUBMODULES NEEDING UPDATES:');
             const outdatedSubmodules = results.filter(r => r.needsUpdate);
             for (const submodule of outdatedSubmodules) {
                 console.log(`   • ${submodule.path}: ${submodule.currentCommit} → ${submodule.latestCommit}`);
             }
-            console.log('');
         }
         
         if (errors > 0) {
+            console.log('');
             console.log('❌ SUBMODULES WITH ERRORS:');
             const errorSubmodules = results.filter(r => r.error);
             for (const submodule of errorSubmodules) {
                 console.log(`   • ${submodule.path}: ${submodule.error}`);
             }
         }
+        
+        console.log('═'.repeat(50));
+        console.log('');
     }
 
     private setOutputVariables(results: SubmoduleInfo[]): void {
