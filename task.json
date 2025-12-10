@@ -38,6 +38,14 @@
       "helpMarkDown": "If true, add comments to the pull request for each submodule that needs updating (only when running in a Pull Request build)."
     },
     {
+      "name": "createPullRequests",
+      "type": "boolean",
+      "label": "Create Pull Requests for Updates",
+      "defaultValue": "true",
+      "required": false,
+      "helpMarkDown": "When enabled, automatically creates pull requests to update outdated submodules. Creates a branch named `{source-branch}.build/Pipeline-{submodule-path}-{commit}`, updates the submodule to the latest remote commit, and creates a PR targeting the current PR's source branch. The original PR author is added as a reviewer. Only works in pull request builds."
+    },
+    {
       "name": "workingDirectory",
       "type": "filePath",
       "label": "Working Directory",

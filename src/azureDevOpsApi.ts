@@ -18,12 +18,42 @@ export interface PullRequestCommentsResponse {
     count: number;
 }
 
+export interface CreatePullRequestRequest {
+    sourceRefName: string;
+    targetRefName: string;
+    title: string;
+    description: string;
+    reviewers?: PullRequestReviewer[];
+}
+
+export interface PullRequestReviewer {
+    id: string;
+    displayName?: string;
+    uniqueName?: string;
+}
+
+export interface PullRequest {
+    pullRequestId: number;
+    title: string;
+    description: string;
+    sourceRefName: string;
+    targetRefName: string;
+    status: string;
+    createdBy: {
+        id: string;
+        displayName: string;
+        uniqueName: string;
+    };
+}
+
 interface AzureDevOpsEnvironment {
     teamFoundationServerUri: string;
     teamProjectId: string;
     buildRepositoryName: string;
     buildReason: string;
     pullRequestId?: string;
+    pullRequestSourceBranch?: string;
+    pullRequestCreatedBy?: string;
     systemAccessToken?: string;
     myAccessToken?: string;
 }
@@ -38,6 +68,8 @@ export class AzureDevOpsApi {
             buildRepositoryName: process.env.BUILD_REPOSITORY_NAME || '',
             buildReason: process.env.BUILD_REASON || '',
             pullRequestId: process.env.SYSTEM_PULLREQUEST_PULLREQUESTID,
+            pullRequestSourceBranch: process.env.SYSTEM_PULLREQUEST_SOURCEBRANCH,
+            pullRequestCreatedBy: process.env.SYSTEM_PULLREQUEST_CREATEDBY_ID,
             systemAccessToken: process.env.SYSTEM_ACCESSTOKEN,
             myAccessToken: tl.getInput('accessToken', false) || process.env.MY_ACCESSTOKEN
         };
@@ -129,7 +161,7 @@ export class AzureDevOpsApi {
     }
 
     public isPullRequest(): boolean {
-        return this.environment.buildReason === 'PullRequest';
+        return this.environment.buildReason === 'PullRequest' && !!this.environment.pullRequestId;
     }
 
     public async getPullRequestComments(): Promise<PullRequestCommentsResponse> {
@@ -210,5 +242,64 @@ export class AzureDevOpsApi {
             tl.warning(`Failed to add PR comment: ${errorMessage}`);
             return false;
         }
+    }
+
+    public async getCurrentPullRequest(): Promise<PullRequest | null> {
+        if (!this.environment.pullRequestId) {
+            return null;
+        }
+
+        const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullrequests/${this.environment.pullRequestId}?api-version=6.0`;
+        
+        try {
+            return await this.makeApiCall(queryString, 'GET');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to get current pull request: ${errorMessage}`);
+        }
+    }
+
+    public async createPullRequest(request: CreatePullRequestRequest): Promise<PullRequest> {
+        const body = JSON.stringify(request);
+        const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullrequests?api-version=6.0`;
+        
+        try {
+            return await this.makeApiCall(queryString, 'POST', body);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to create pull request: ${errorMessage}`);
+        }
+    }
+
+    public async searchPullRequests(sourceBranch: string, targetBranch: string): Promise<PullRequest[]> {
+        const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullrequests?searchCriteria.sourceRefName=refs/heads/${sourceBranch}&searchCriteria.targetRefName=refs/heads/${targetBranch}&searchCriteria.status=active&api-version=6.0`;
+        
+        try {
+            const response = await this.makeApiCall(queryString);
+            return response.value || [];
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to search pull requests: ${errorMessage}`);
+        }
+    }
+
+    public getPullRequestSourceBranch(): string | undefined {
+        return this.environment.pullRequestSourceBranch;
+    }
+
+    public getPullRequestCreatedBy(): string | undefined {
+        return this.environment.pullRequestCreatedBy;
+    }
+
+    public static sanitizeBranchName(input: string): string {
+        // Remove or replace characters not allowed in Git branch names
+        // Git branch names cannot contain: spaces, ~, ^, :, ?, *, [, \, .., @{, //
+        return input
+            .replace(/[\/\\:*?"<>|~^[\]@{}]/g, '-')  // Replace forbidden chars with dash
+            .replace(/\s+/g, '-')                     // Replace spaces with dash
+            .replace(/\.{2,}/g, '-')                  // Replace multiple dots with dash
+            .replace(/-+/g, '-')                      // Replace multiple dashes with single dash
+            .replace(/^-+|-+$/g, '')                  // Remove leading/trailing dashes
+            .toLowerCase();                           // Convert to lowercase
     }
 }

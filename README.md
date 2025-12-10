@@ -20,6 +20,18 @@ A powerful Azure DevOps pipeline task that automatically checks your git submodu
   - **Rich Output**: Detailed logging with clear status indicators and summary reports
   - **Error Handling**: Graceful handling of network issues and missing repositories
 
+## 🔄 Automatic Pull Request Creation
+
+When `createPullRequests` is enabled (default), the task can automatically create pull requests to update outdated submodules:
+
+- **Automatic Branch Creation**: Creates branches with format `{source-branch}.build/Pipeline-{submodule-path}-{commit-hash}`
+- **Submodule Updates**: Updates submodules to their latest remote commits 
+- **Smart PR Targeting**: Targets the current pull request's source branch
+- **Reviewer Assignment**: Adds the original PR author as a reviewer
+- **Linked Comments**: PR comments include links to created update PRs using `!{PR-ID}` syntax
+
+This feature only runs during Pull Request builds and requires appropriate repository permissions.
+
 ## 📋 Usage
 
 Add the Git Submodule Updater task to your `azure-pipelines.yml`:
@@ -34,6 +46,7 @@ steps:
     defaultBranch: 'main'
     failOnOutdated: false
     addPullRequestComments: true
+    createPullRequests: true
 ```
 
 ## 📖 Documentation
@@ -88,6 +101,7 @@ The task sets these variables for use in subsequent tasks:
 |-------|-------------|----------|----------|
 | `failOnOutdated` | Fail the task if submodules are outdated | No | `false` |
 | `addPullRequestComments` | Add comments to pull requests for each outdated submodule | No | `true` |
+| `createPullRequests` | Automatically create PRs to update outdated submodules | No | `true` |
 | `workingDirectory` | Directory containing the .gitmodules file | No | `$(System.DefaultWorkingDirectory)` |
 | `defaultBranch` | Default branch name to check for latest commits on submodule repos | No | `main` |
 | `gitmodulesPath` | Path to .gitmodules file relative to working directory | No | `.gitmodules` |
