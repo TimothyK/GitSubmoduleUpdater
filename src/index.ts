@@ -425,6 +425,11 @@ async function createPullRequestForSubmodule(
     
     console.log(`📝 Creating branch: ${branchName} for submodule: ${result.path}`);
     
+    // Get the current branch to return to later
+    const originalBranch = await git.raw(['rev-parse', '--abbrev-ref', 'HEAD']);
+    const originalBranchName = originalBranch.trim();
+    console.log(`💾 Current branch: ${originalBranchName} (will return here after update)`);
+    
     try {
         // Check if branch already exists and delete if so
         try {
@@ -509,14 +514,23 @@ async function createPullRequestForSubmodule(
         return pullRequest.pullRequestId;
         
     } catch (error) {
-        // Clean up branch if PR creation failed
-        try {
-            await git.checkout('HEAD~1'); // Checkout previous commit
-            await git.branch(['-D', branchName]); // Delete the branch
-        } catch {
-            // Ignore cleanup errors
-        }
+        // Error will be re-thrown after cleanup in finally block
         throw error;
+    } finally {
+        // Always ensure we return to the original branch
+        try {
+            console.log(`🔙 Returning to original branch: ${originalBranchName}`);
+            await git.checkout(originalBranchName);
+        } catch (checkoutError) {
+            console.log(`⚠️  Warning: Could not return to original branch ${originalBranchName}: ${checkoutError instanceof Error ? checkoutError.message : String(checkoutError)}`);
+            // If we can't checkout the original branch, try to cleanup the created branch
+            try {
+                await git.branch(['-D', branchName]);
+                console.log(`🗑️  Cleaned up created branch: ${branchName}`);
+            } catch (cleanupError) {
+                console.log(`⚠️  Warning: Could not cleanup branch ${branchName}: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}`);
+            }
+        }
     }
 }
 
