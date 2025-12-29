@@ -283,6 +283,24 @@ export class AzureDevOpsApi {
         }
     }
 
+    public async findPullRequestBySourceBranch(sourceBranchRef: string): Promise<PullRequest | null> {
+        // Ensure the sourceBranchRef is in the correct format
+        const sourceRef = sourceBranchRef.startsWith('refs/heads/') ? sourceBranchRef : `refs/heads/${sourceBranchRef}`;
+        
+        const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullrequests?searchCriteria.sourceRefName=${encodeURIComponent(sourceRef)}&api-version=6.0`;
+        
+        try {
+            const response = await this.makeApiCall(queryString);
+            const pullRequests = response.value || [];
+            
+            // Return the first open PR found for this source branch
+            return pullRequests.length > 0 ? pullRequests[0] : null;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to find open pull request by source branch: ${errorMessage}`);
+        }
+    }
+
     public getPullRequestSourceBranch(): string | undefined {
         return this.environment.pullRequestSourceBranch;
     }

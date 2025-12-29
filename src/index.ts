@@ -390,10 +390,10 @@ async function createPullRequestsForOutdatedSubmodules(
     
     for (const submodule of outdatedSubmodules) {
         try {
-            const prId = await createPullRequestForSubmodule(submodule, azDoApi, workingDirectory, currentPR);
+            const prId = await createOrFindPullRequestForSubmodule(submodule, azDoApi, workingDirectory, currentPR);
             if (prId) {
                 createdPRs.set(submodule.path, prId);
-                console.log(`✅ Created PR #${prId} for submodule: ${submodule.path}`);
+                console.log(`✅ Created or found PR #${prId} for submodule: ${submodule.path}`);
             }
         } catch (error) {
             console.log(`⚠️  Failed to create PR for ${submodule.path}: ${error instanceof Error ? error.message : String(error)}`);
@@ -415,7 +415,7 @@ function sanitizeForBranchName(input: string): string {
         .toLowerCase();                           // Convert to lowercase
 }
 
-async function createPullRequestForSubmodule(
+async function createOrFindPullRequestForSubmodule(
     submodule: SubmoduleInfo,
     azDoApi: AzureDevOpsApi,
     workingDirectory: string,
@@ -449,8 +449,23 @@ async function createPullRequestForSubmodule(
         // Check if branch already exists
         try {
             await git.raw(['show-ref', '--verify', `refs/heads/${branchName}`]);
-            console.log(`ℹ️  Branch ${branchName} already exists - assuming PR already exists, skipping creation`);
-            return null;
+            console.log(`ℹ️  Branch ${branchName} already exists - checking for existing PR...`);
+            
+            // Look for existing open PR for this branch
+            try {
+                const existingPR = await azDoApi.findPullRequestBySourceBranch(`refs/heads/${branchName}`);
+                if (existingPR) {
+                    console.log(`✅ Found existing PR #${existingPR.pullRequestId} for branch ${branchName}`);
+                    return existingPR.pullRequestId;
+                } else {
+                    console.log(`⚠️  Branch ${branchName} exists but no open PR found - skipping creation`);
+                    return null;
+                }
+            } catch (prSearchError) {
+                console.log(`⚠️  Could not search for existing PR: ${prSearchError instanceof Error ? prSearchError.message : String(prSearchError)}`);
+                console.log(`ℹ️  Assuming PR already exists for branch ${branchName}, skipping creation`);
+                return null;
+            }
         } catch {
             // Branch doesn't exist, continue with creation
         }
@@ -578,7 +593,7 @@ async function run(): Promise<void> {
                         console.log(`🔍 Fetching PR information from Azure DevOps API...`);
                         try {
                             currentPR = await azDoApi.getCurrentPullRequest();
-                            console.log(`✅ Retrieved PR information: Source Branch: ${currentPR?.sourceRefName}, Created By: ${currentPR?.createdBy?.id}`);
+                            console.log(`✅ Retrieved PR information: Source Branch: ${currentPR?.sourceRefName}`);
                         } catch (error) {
                             console.log(`⚠️  Failed to fetch PR information: ${error instanceof Error ? error.message : String(error)}`);
                         }
