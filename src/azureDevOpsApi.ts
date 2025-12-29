@@ -18,6 +18,34 @@ export interface PullRequestCommentsResponse {
     count: number;
 }
 
+export interface CreatePullRequestRequest {
+    sourceRefName: string;
+    targetRefName: string;
+    title: string;
+    description: string;
+    reviewers?: PullRequestReviewer[];
+}
+
+export interface PullRequestReviewer {
+    id: string;
+    displayName?: string;
+    uniqueName?: string;
+}
+
+export interface PullRequest {
+    pullRequestId: number;
+    title: string;
+    description: string;
+    sourceRefName: string;
+    targetRefName: string;
+    status: string;
+    createdBy: {
+        id: string;
+        displayName: string;
+        uniqueName: string;
+    };
+}
+
 interface AzureDevOpsEnvironment {
     teamFoundationServerUri: string;
     teamProjectId: string;
@@ -129,7 +157,7 @@ export class AzureDevOpsApi {
     }
 
     public isPullRequest(): boolean {
-        return this.environment.buildReason === 'PullRequest';
+        return this.environment.buildReason === 'PullRequest' && !!this.environment.pullRequestId;
     }
 
     public async getPullRequestComments(): Promise<PullRequestCommentsResponse> {
@@ -209,6 +237,93 @@ export class AzureDevOpsApi {
             
             tl.warning(`Failed to add PR comment: ${errorMessage}`);
             return false;
+        }
+    }
+
+    public async getCurrentPullRequest(): Promise<PullRequest | null> {
+        if (!this.environment.pullRequestId) {
+            return null;
+        }
+
+        const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullrequests/${this.environment.pullRequestId}?api-version=6.0`;
+        
+        try {
+            return await this.makeApiCall(queryString, 'GET');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to get current pull request: ${errorMessage}`);
+        }
+    }
+
+    public async createPullRequest(request: CreatePullRequestRequest): Promise<PullRequest> {
+        const body = JSON.stringify(request);
+        const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullrequests?api-version=6.0`;
+        
+        try {
+            return await this.makeApiCall(queryString, 'POST', body);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to create pull request: ${errorMessage}`);
+        }
+    }
+
+    public async findPullRequestBySourceBranch(sourceBranchRef: string): Promise<PullRequest | null> {
+        // Ensure the sourceBranchRef is in the correct format
+        const sourceRef = sourceBranchRef.startsWith('refs/heads/') ? sourceBranchRef : `refs/heads/${sourceBranchRef}`;
+        
+        const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullrequests?searchCriteria.sourceRefName=${encodeURIComponent(sourceRef)}&api-version=6.0`;
+        
+        try {
+            const response = await this.makeApiCall(queryString);
+            const pullRequests = response.value || [];
+            
+            // Return the first open PR found for this source branch
+            return pullRequests.length > 0 ? pullRequests[0] : null;
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to find open pull request by source branch: ${errorMessage}`);
+        }
+    }
+
+    public async setAutoComplete(pullRequestId: number, autoCompleteSetById: string, deleteSourceBranch: boolean = true): Promise<void> {
+        const updateRequest = {
+            autoCompleteSetBy: {
+                id: autoCompleteSetById
+            },
+            completionOptions: {
+                deleteSourceBranch: deleteSourceBranch,
+                squashMerge: false,
+                bypassPolicy: false,
+                bypassReason: ''
+            }
+        };
+        
+        const body = JSON.stringify(updateRequest);
+        const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullrequests/${pullRequestId}?api-version=6.0`;
+        
+        try {
+            await this.makeApiCall(queryString, 'PATCH', body);
+            tl.debug(`Auto-complete set for PR #${pullRequestId}`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to set auto-complete for PR #${pullRequestId}: ${errorMessage}`);
+        }
+    }
+
+    public async getCurrentPullRequestLabels(): Promise<Array<{id: string, name: string, active: boolean}>> {
+        if (!this.environment.pullRequestId) {
+            return [];
+        }
+
+        const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullrequests/${this.environment.pullRequestId}/labels?api-version=6.0`;
+        
+        try {
+            const response = await this.makeApiCall(queryString, 'GET');
+            return response.value || [];
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            tl.debug(`Failed to get PR labels for PR #${this.environment.pullRequestId}: ${errorMessage}`);
+            return [];
         }
     }
 }
