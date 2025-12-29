@@ -53,6 +53,9 @@ export INPUT_WORKINGDIRECTORY="/path/to/your/repo"
 export INPUT_GITMODULESPATH=".gitmodules" 
 export INPUT_DEFAULTBRANCH="main"
 export INPUT_FAILONOUTDATED="false"
+export INPUT_ADDPULLREQUESTCOMMENTS="true"
+export INPUT_CREATEPULLREQUESTS="true"
+export INPUT_SUPPRESSTAGNAMES="NoSubmoduleCheck,NoBuild"
 
 # Run the task
 node dist/index.js
@@ -149,8 +152,10 @@ export SYSTEM_ACCESSTOKEN="your-bearer-token-here"
 
 # Task inputs
 export INPUT_WORKINGDIRECTORY="/path/to/your/repo"
-export INPUT_ADDPULLREQUESTCOMMENTS="true"
 export INPUT_FAILONOUTDATED="false"
+export INPUT_ADDPULLREQUESTCOMMENTS="true"
+export INPUT_CREATEPULLREQUESTS="true"
+export INPUT_SUPPRESSTAGNAMES="NoSubmoduleCheck,NoBuild"
 
 # Debug settings
 export SYSTEM_DEBUG="true"
@@ -278,14 +283,18 @@ Main class that orchestrates the submodule checking process:
 
 ```typescript
 interface SubmoduleInfo {
-    name: string;           // Submodule name
-    path: string;           // Submodule path
-    url: string;            // Remote repository URL
-    branch?: string;        // Branch to check (optional)
-    currentCommit: string;  // Current commit in main repo
-    latestCommit: string;   // Latest commit on remote
-    needsUpdate: boolean;   // Whether update is needed
-    error?: string;         // Error message if any
+    name: string;                    // Submodule name
+    path: string;                    // Submodule path
+    url: string;                     // Remote repository URL
+    branch?: string;                 // Branch to check (optional)
+    currentCommitSha: string;        // Current commit SHA (short, 8 chars)
+    latestCommitSha: string;         // Latest commit SHA (short, 8 chars)
+    currentTags: string[];           // Git tags for current commit
+    latestTags: string[];            // Git tags for latest commit
+    currentDisplayVersion: string;   // Display version (SHA and tag)
+    latestDisplayVersion: string;    // Display version for latest (SHA and tag)
+    needsUpdate: boolean;            // Whether update is needed
+    error?: string;                  // Error message if any
 }
 ```
 
