@@ -4,7 +4,7 @@ import { SubmoduleInfo } from './SubmoduleInfo';
 
 export class PullRequestCommentManager {
 
-    public async addPullRequestCommentsForOutdatedSubmodules(submodules: SubmoduleInfo[], createdPullRequests?: Map<string, number>): Promise<void> {
+    public async addPullRequestCommentsForOutdatedSubmodules(submodules: SubmoduleInfo[]): Promise<void> {
         
         const azDoApi = new AzureDevOpsApi();
         if (!azDoApi.isPullRequest()) {
@@ -24,7 +24,7 @@ export class PullRequestCommentManager {
         console.log(`💬 Adding PR comments for ${outdatedSubmodules.length} outdated submodule(s)...`);
 
         for (const submodule of outdatedSubmodules) {
-            const commentContent = this.createPullRequestCommentContent(submodule, createdPullRequests);
+            const commentContent = this.createPullRequestCommentContent(submodule);
             const added = await azDoApi.addPullRequestCommentIfNotExists(commentContent);
 
             if (added) {
@@ -35,14 +35,13 @@ export class PullRequestCommentManager {
         }
     }
 
-    private createPullRequestCommentContent(submodule: SubmoduleInfo, createdPullRequests?: Map<string, number>): string {
+    private createPullRequestCommentContent(submodule: SubmoduleInfo): string {
 
         let comment = `⚠ Submodule needs update:\n[${submodule.path}](${submodule.url}): ${submodule.currentDisplayVersion} → ${submodule.latestDisplayVersion}`;
 
         // Add PR link if a PR was created for this submodule
-        if (createdPullRequests && createdPullRequests.has(submodule.path)) {
-            const prId = createdPullRequests.get(submodule.path);
-            comment += `\n\n🔄 **Update PR:** !${prId}`;
+        if (submodule.pullRequestId) {
+            comment += `\n\n🔄 **Update PR:** !${submodule.pullRequestId}`;
         }
 
         return comment;

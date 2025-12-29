@@ -295,6 +295,7 @@ interface SubmoduleInfo {
     latestDisplayVersion: string;    // Display version for latest (SHA and tag)
     needsUpdate: boolean;            // Whether update is needed
     error?: string;                  // Error message if any
+    pullRequestId?: number | null;   // PR ID if one was created/found for this submodule
 }
 ```
 

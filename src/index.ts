@@ -8,13 +8,12 @@ import { PullRequestCommentManager } from './PullRequestCommentManager';
 async function createPullRequestsForOutdatedSubmodules(
     submodules: SubmoduleInfo[], 
     workingDirectory: string
-): Promise<Map<string, number>> {
+): Promise<void> {
     const outdatedSubmodules = submodules.filter(r => r.needsUpdate);
-    const createdPRs = new Map<string, number>();
     
     if (outdatedSubmodules.length === 0) {
         console.log('ℹ️ All submodules are up to date - no PRs to create');
-        return createdPRs;
+        return;
     }
 
     const azDoApi = new AzureDevOpsApi();
@@ -22,7 +21,7 @@ async function createPullRequestsForOutdatedSubmodules(
         const buildReason = process.env.BUILD_REASON || 'unknown';
         console.log(`ℹ️  Build reason (${buildReason}) indicates this is not a Pull Request - no PR creation needed`);
         tl.debug('Not running in a Pull Request build context, skipping PR creation');
-        return createdPRs;
+        return;
     }
 
     // Get PR information from API
@@ -43,15 +42,13 @@ async function createPullRequestsForOutdatedSubmodules(
         try {
             const prId = await createOrFindPullRequestForSubmodule(submodule, azDoApi, workingDirectory, currentPR);
             if (prId) {
-                createdPRs.set(submodule.path, prId);
+                submodule.pullRequestId = prId;
                 console.log(`✅ Created or found PR #${prId} for submodule: ${submodule.path}`);
             }
         } catch (error) {
             console.log(`⚠️  Failed to create PR for ${submodule.path}: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
-    
-    return createdPRs;
 }
 
 async function createOrFindPullRequestForSubmodule(
@@ -235,11 +232,10 @@ async function run(): Promise<void> {
         const submodules = await checker.checkSubmodules();
 
         // Create PRs for updates if enabled and in a pull request build
-        let createdPullRequests: Map<string, number> = new Map();
         console.log(`🔄 Create Pull Requests for Updates: ${createPullRequests}`);
         if (createPullRequests) {
             try {
-                createdPullRequests = await createPullRequestsForOutdatedSubmodules(submodules, workingDirectory);
+                await createPullRequestsForOutdatedSubmodules(submodules, workingDirectory);
             } catch (error) {
                 tl.warning(`Failed to create PRs: ${error instanceof Error ? error.message : String(error)}`);
             }
@@ -251,7 +247,7 @@ async function run(): Promise<void> {
         if (addPullRequestComments) {
             try {                
                 const commentManager = new PullRequestCommentManager();
-                await commentManager.addPullRequestCommentsForOutdatedSubmodules(submodules, createdPullRequests);
+                await commentManager.addPullRequestCommentsForOutdatedSubmodules(submodules);
             } catch (error) {
                 tl.warning(`Failed to add PR comments: ${error instanceof Error ? error.message : String(error)}`);
             }
