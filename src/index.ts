@@ -9,10 +9,12 @@ interface SubmoduleInfo {
     path: string;
     url: string;
     branch?: string;
-    currentCommit: string;
-    latestCommit: string;
+    currentCommitSha: string;
+    latestCommitSha: string;
     currentTags: string[];
     latestTags: string[];
+    currentDisplayVersion: string;
+    latestDisplayVersion: string;
     needsUpdate: boolean;
     error?: string;
 }
@@ -110,8 +112,8 @@ class GitSubmoduleChecker {
                 results.push(result);
                 
                 console.log(`  📍 URL: ${result.url}`);
-                console.log(`  📌 Current commit: ${result.currentCommit}`);
-                console.log(`  🏷️ Latest commit:  ${result.latestCommit}`);
+                console.log(`  📌 Current commit: ${result.currentDisplayVersion}`);
+                console.log(`  🏷️ Latest commit:  ${result.latestDisplayVersion}`);
                 
                 if (result.needsUpdate) {
                     console.log('  ⚠️ Status: NEEDS UPDATE');
@@ -124,8 +126,10 @@ class GitSubmoduleChecker {
                     path: submodule.path,
                     url: submodule.url,
                     branch: submodule.branch,
-                    currentCommit: 'unknown',
-                    latestCommit: 'unknown',
+                    currentCommitSha: '',
+                    latestCommitSha: '',
+                    currentDisplayVersion: 'unknown',
+                    latestDisplayVersion: 'unknown',
                     currentTags: [],
                     latestTags: [],
                     needsUpdate: false,
@@ -198,8 +202,10 @@ class GitSubmoduleChecker {
             path: submodule.path,
             url: submodule.url,
             branch: branchToCheck,
-            currentCommit: currentCommitDisplay,
-            latestCommit: latestCommitDisplay,
+            currentCommitSha: currentCommit.substring(0, 8),
+            latestCommitSha: latestCommit.substring(0, 8),
+            currentDisplayVersion: currentCommitDisplay,
+            latestDisplayVersion: latestCommitDisplay,
             currentTags: currentCommitTags,
             latestTags: latestCommitTags,
             needsUpdate
@@ -343,7 +349,7 @@ class GitSubmoduleChecker {
             console.log('⚠️  SUBMODULES NEEDING UPDATES:');
             const outdatedSubmodules = results.filter(r => r.needsUpdate);
             for (const submodule of outdatedSubmodules) {
-                console.log(`   • ${submodule.path}: ${submodule.currentCommit} → ${submodule.latestCommit}`);
+                console.log(`   • ${submodule.path}: ${submodule.currentDisplayVersion} → ${submodule.latestDisplayVersion}`);
             }
         }
         
@@ -376,10 +382,8 @@ class GitSubmoduleChecker {
 }
 
 function createPullRequestCommentContent(submodule: SubmoduleInfo, createdPullRequests?: Map<string, number>): string {
-    const currentCommitWithTags = submodule.currentCommit;
-    const latestCommitWithTags = submodule.latestCommit;
     
-    let comment = `⚠ Submodule needs update:\n[${submodule.path}](${submodule.url}): ${currentCommitWithTags} → ${latestCommitWithTags}`;
+    let comment = `⚠ Submodule needs update:\n[${submodule.path}](${submodule.url}): ${submodule.currentDisplayVersion} → ${submodule.latestDisplayVersion}`;
     
     // Add PR link if a PR was created for this submodule
     if (createdPullRequests && createdPullRequests.has(submodule.path)) {
@@ -478,7 +482,7 @@ async function createOrFindPullRequestForSubmodule(
     
     // Create branch name with GitSubmoduleUpdate prefix
     const sanitizedPath = sanitizeForBranchName(submodule.name);
-    const version = submodule.latestTags.length > 0 ? submodule.latestTags[0] : submodule.latestCommit.substring(0, 8);
+    const version = submodule.latestTags.length > 0 ? submodule.latestTags[0] : submodule.latestCommitSha;
     const sanitizedVersion = sanitizeForBranchName(version);
     const branchName = `GitSubmoduleUpdate-${sanitizedPath}-${sanitizedVersion}`;
     
@@ -506,8 +510,8 @@ async function createOrFindPullRequestForSubmodule(
         await git.add(`${submodule.path}`);
         
         // Build commit message with tags
-        const currentCommitShort = submodule.currentCommit.substring(0, 8);
-        const latestCommitShort = submodule.latestCommit.substring(0, 8);
+        const currentCommitShort = submodule.currentCommitSha;
+        const latestCommitShort = submodule.latestCommitSha;
         const currentTagsText = submodule.currentTags.length > 0 ? ` [${submodule.currentTags.join(', ')}]` : '';
         const latestTagsText = submodule.latestTags.length > 0 ? ` [${submodule.latestTags.join(', ')}]` : '';
         
@@ -522,15 +526,15 @@ async function createOrFindPullRequestForSubmodule(
         const title = `Update submodule ${submodule.path} to ${sanitizedVersion}`;
         
         // Use tag information from submodule object
-        let currentCommitInfo = submodule.currentCommit.substring(0, 8);
-        let latestCommitInfo = submodule.latestCommit.substring(0, 8);
+        let currentCommitInfo = submodule.currentCommitSha;
+        let latestCommitInfo = submodule.latestCommitSha;
         
         if (submodule.currentTags.length > 0) {
-            currentCommitInfo = `${submodule.currentTags[0]} (${submodule.currentCommit.substring(0, 8)})`;
+            currentCommitInfo = `${submodule.currentTags[0]} (${submodule.currentCommitSha})`;
         }
         
         if (submodule.latestTags.length > 0) {
-            latestCommitInfo = `${submodule.latestTags[0]} (${submodule.latestCommit.substring(0, 8)})`;
+            latestCommitInfo = `${submodule.latestTags[0]} (${submodule.latestCommitSha})`;
         }
         
         const description = `Automated update of submodule **[${submodule.path}](${submodule.url})**.` +
