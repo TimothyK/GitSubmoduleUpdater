@@ -283,8 +283,8 @@ Main class that orchestrates the submodule checking process:
 
 ```typescript
 interface SubmoduleInfo {
-    name: string;                    // Submodule name
-    path: string;                    // Submodule path
+    name: string;                    // Submodule name, leaf folder name in the path
+    path: string;                    // Submodule path, full path
     url: string;                     // Remote repository URL
     branch?: string;                 // Branch to check (optional)
     currentCommitSha: string;        // Current commit SHA (short, 8 chars)
