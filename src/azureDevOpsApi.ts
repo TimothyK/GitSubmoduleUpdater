@@ -300,12 +300,4 @@ export class AzureDevOpsApi {
             throw new Error(`Failed to find open pull request by source branch: ${errorMessage}`);
         }
     }
-
-    public getPullRequestSourceBranch(): string | undefined {
-        return this.environment.pullRequestSourceBranch;
-    }
-
-    public getPullRequestCreatedBy(): string | undefined {
-        return this.environment.pullRequestCreatedBy;
-    }
 }

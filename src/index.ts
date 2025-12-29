@@ -376,7 +376,7 @@ async function createPullRequestsForOutdatedSubmodules(
     submodules: SubmoduleInfo[], 
     azDoApi: AzureDevOpsApi, 
     workingDirectory: string,
-    currentPR?: any
+    currentPR: any
 ): Promise<Map<string, number>> {
     const outdatedSubmodules = submodules.filter(r => r.needsUpdate);
     const createdPRs = new Map<string, number>();
@@ -403,32 +403,18 @@ async function createPullRequestsForOutdatedSubmodules(
     return createdPRs;
 }
 
-function sanitizeForBranchName(input: string): string {
-    // Remove or replace characters not allowed in Git branch names
-    // Git branch names cannot contain: spaces, ~, ^, :, ?, *, [, \, .., @{, //
-    return input
-        .replace(/[\/\\:*?"<>|~^[\]@{}]/g, '-')  // Replace forbidden chars with dash
-        .replace(/\s+/g, '-')                     // Replace spaces with dash
-        .replace(/\.{2,}/g, '-')                  // Replace multiple dots with dash
-        .replace(/-+/g, '-')                      // Replace multiple dashes with single dash
-        .replace(/^-+|-+$/g, '');                  // Remove leading/trailing dashes
-}
-
 async function createOrFindPullRequestForSubmodule(
     submodule: SubmoduleInfo,
     azDoApi: AzureDevOpsApi,
     workingDirectory: string,
-    currentPR?: any
+    currentPR: any
 ): Promise<number | null> {
     const git = simpleGit(workingDirectory);
         
     // Get the source branch to use as base
-    let sourceBranch = azDoApi.getPullRequestSourceBranch();
-    if (!sourceBranch && currentPR) {
-        sourceBranch = currentPR.sourceRefName;
-    }
+    const sourceBranch = currentPR.sourceRefName;
     if (!sourceBranch) {
-        throw new Error('Cannot determine source branch - not available from environment or API');
+        throw new Error('Cannot determine source branch from current PR');
     }
     
     // Create branch name with GitSubmoduleUpdate prefix
@@ -445,28 +431,10 @@ async function createOrFindPullRequestForSubmodule(
     console.log(`💾 Current branch: ${originalBranchName} (will return here after update)`);
     
     try {
-        // Check if branch already exists
-        try {
-            await git.raw(['show-ref', '--verify', `refs/heads/${branchName}`]);
-            console.log(`ℹ️  Branch ${branchName} already exists - checking for existing PR...`);
-            
-            // Look for existing open PR for this branch
-            try {
-                const existingPR = await azDoApi.findPullRequestBySourceBranch(`refs/heads/${branchName}`);
-                if (existingPR) {
-                    console.log(`✅ Found existing PR #${existingPR.pullRequestId} for branch ${branchName}`);
-                    return existingPR.pullRequestId;
-                } else {
-                    console.log(`⚠️  Branch ${branchName} exists but no open PR found - skipping creation`);
-                    return null;
-                }
-            } catch (prSearchError) {
-                console.log(`⚠️  Could not search for existing PR: ${prSearchError instanceof Error ? prSearchError.message : String(prSearchError)}`);
-                console.log(`ℹ️  Assuming PR already exists for branch ${branchName}, skipping creation`);
-                return null;
-            }
-        } catch {
-            // Branch doesn't exist, continue with creation
+        // Check if branch already exists and find existing PR
+        const existingPRId = await findPullRequest(git, branchName, azDoApi);
+        if (existingPRId !== null) {
+            return existingPRId;
         }
         
         // Create and checkout new branch
@@ -514,10 +482,7 @@ async function createOrFindPullRequestForSubmodule(
                            `This PR was automatically created to keep the submodule up to date.`;
         
         const reviewers = [];
-        let createdBy = azDoApi.getPullRequestCreatedBy();
-        if (!createdBy && currentPR) {
-            createdBy = currentPR.createdBy?.id;
-        }
+        const createdBy = currentPR.createdBy?.id;
         if (createdBy) {
             reviewers.push({
                 id: createdBy,
@@ -558,6 +523,46 @@ async function createOrFindPullRequestForSubmodule(
     
 }
 
+function sanitizeForBranchName(input: string): string {
+    // Remove or replace characters not allowed in Git branch names
+    // Git branch names cannot contain: spaces, ~, ^, :, ?, *, [, \, .., @{, //
+    return input
+        .replace(/[\/\\:*?"<>|~^[\]@{}]/g, '-')  // Replace forbidden chars with dash
+        .replace(/\s+/g, '-')                     // Replace spaces with dash
+        .replace(/\.{2,}/g, '-')                  // Replace multiple dots with dash
+        .replace(/-+/g, '-')                      // Replace multiple dashes with single dash
+        .replace(/^-+|-+$/g, '');                  // Remove leading/trailing dashes
+}
+
+async function findPullRequest(
+    git: SimpleGit,
+    branchName: string,
+    azDoApi: AzureDevOpsApi
+): Promise<number | null> {
+    try {
+        await git.raw(['show-ref', '--verify', `refs/heads/${branchName}`]);
+        console.log(`ℹ️  Branch ${branchName} already exists - checking for existing PR...`);
+        
+        // Look for existing open PR for this branch
+        try {
+            const existingPR = await azDoApi.findPullRequestBySourceBranch(`refs/heads/${branchName}`);
+            if (existingPR) {
+                console.log(`✅ Found existing PR #${existingPR.pullRequestId} for branch ${branchName}`);
+                return existingPR.pullRequestId;
+            } else {
+                console.log(`⚠️  Branch ${branchName} exists but no open PR found - skipping creation`);
+                return null;
+            }
+        } catch (prSearchError) {
+            console.log(`⚠️  Could not search for existing PR: ${prSearchError instanceof Error ? prSearchError.message : String(prSearchError)}`);
+            console.log(`ℹ️  Assuming PR already exists for branch ${branchName}, skipping creation`);
+            return null;
+        }
+    } catch {
+        // Branch doesn't exist
+        return null;
+    }
+}
 
 async function run(): Promise<void> {
     try {
@@ -571,7 +576,7 @@ async function run(): Promise<void> {
         tl.debug(`Task inputs - workingDirectory: ${workingDirectory}, gitmodulesPath: ${gitmodulesPath}, defaultBranch: ${defaultBranch}, failOnOutdated: ${failOnOutdated}, addPullRequestComments: ${addPullRequestComments}, createPullRequests: ${createPullRequests}`);
 
         const checker = new GitSubmoduleChecker(workingDirectory, gitmodulesPath, defaultBranch);
-        const results = await checker.checkSubmodules();
+        const submodules = await checker.checkSubmodules();
 
         // Create PRs for updates if enabled and in a pull request build
         let createdPullRequests: Map<string, number> = new Map();
@@ -579,27 +584,23 @@ async function run(): Promise<void> {
         if (createPullRequests) {
             try {
                 const azDoApi = new AzureDevOpsApi();
-                const buildReason = process.env.BUILD_REASON || 'unknown';
-                const pullRequestId = process.env.SYSTEM_PULLREQUEST_PULLREQUESTID;
-                const sourceBranch = process.env.SYSTEM_PULLREQUEST_SOURCEBRANCH;
-                
-                console.log(`🔍 PR Context Debug - Build Reason: ${buildReason}, PR ID: ${pullRequestId || 'undefined'}, Source Branch: ${sourceBranch || 'undefined'}`);
-                
+
                 if (azDoApi.isPullRequest()) {
-                    // Try to get PR information from API if environment variables are missing
-                    let currentPR: any = null;
-                    if (!azDoApi.getPullRequestSourceBranch() || !azDoApi.getPullRequestCreatedBy()) {
-                        console.log(`🔍 Fetching PR information from Azure DevOps API...`);
-                        try {
-                            currentPR = await azDoApi.getCurrentPullRequest();
-                            console.log(`✅ Retrieved PR information: Source Branch: ${currentPR?.sourceRefName}`);
-                        } catch (error) {
-                            console.log(`⚠️  Failed to fetch PR information: ${error instanceof Error ? error.message : String(error)}`);
-                        }
+                    // Get PR information from API
+                    console.log(`🔍 Fetching PR information from Azure DevOps API...`);
+                    let currentPR: any;
+                    try {
+                        currentPR = await azDoApi.getCurrentPullRequest();
+                        console.log(`✅ Retrieved PR information: Source Branch: ${currentPR.sourceRefName}`);
+                    } catch (error) {
+                        const errorMessage = error instanceof Error ? error.message : String(error);
+                        console.log(`⚠️  Failed to fetch PR information: ${errorMessage}`);
+                        throw new Error(`Cannot create PRs without current PR information: ${errorMessage}`);
                     }
-                    
-                    createdPullRequests = await createPullRequestsForOutdatedSubmodules(results, azDoApi, workingDirectory, currentPR);
+                                        
+                    createdPullRequests = await createPullRequestsForOutdatedSubmodules(submodules, azDoApi, workingDirectory, currentPR);
                 } else {
+                    const buildReason = process.env.BUILD_REASON || 'unknown';
                     console.log(`ℹ️  Build reason (${buildReason}) indicates this is not a Pull Request - no PR creation needed`);
                     tl.debug('Not running in a Pull Request build context, skipping PR creation');
                 }
@@ -615,7 +616,7 @@ async function run(): Promise<void> {
             try {
                 const azDoApi = new AzureDevOpsApi();
                 if (azDoApi.isPullRequest()) {
-                    await addPullRequestCommentsForOutdatedSubmodules(results, azDoApi, createdPullRequests);
+                    await addPullRequestCommentsForOutdatedSubmodules(submodules, azDoApi, createdPullRequests);
                 } else {
                     console.log(`ℹ️  Build reason (${process.env.BUILD_REASON || 'unknown'}) indicates this is not a Pull Request - no PR to add comments to`);
                     tl.debug('Not running in a Pull Request build, skipping PR comments');
@@ -626,14 +627,14 @@ async function run(): Promise<void> {
         }
 
         // Check if we should fail the task
-        const needsUpdateCount = results.filter(r => r.needsUpdate).length;
+        const needsUpdateCount = submodules.filter(r => r.needsUpdate).length;
         if (failOnOutdated && needsUpdateCount > 0) {
             tl.setResult(tl.TaskResult.Failed, `Task configured to fail when submodules are outdated. ${needsUpdateCount} submodule(s) need updating.`);
             return;
         }
 
         // Check for errors
-        const errorCount = results.filter(r => r.error).length;
+        const errorCount = submodules.filter(r => r.error).length;
         if (errorCount > 0) {
             tl.setResult(tl.TaskResult.SucceededWithIssues, `Task completed with ${errorCount} error(s) while checking submodules.`);
             return;
