@@ -3,42 +3,7 @@ import { simpleGit, SimpleGit } from 'simple-git';
 import { AzureDevOpsApi } from './azureDevOpsApi';
 import { SubmoduleInfo } from './SubmoduleInfo';
 import { GitSubmoduleChecker } from './GitSubmoduleChecker';
-
-function createPullRequestCommentContent(submodule: SubmoduleInfo, createdPullRequests?: Map<string, number>): string {
-    
-    let comment = `⚠ Submodule needs update:\n[${submodule.path}](${submodule.url}): ${submodule.currentDisplayVersion} → ${submodule.latestDisplayVersion}`;
-    
-    // Add PR link if a PR was created for this submodule
-    if (createdPullRequests && createdPullRequests.has(submodule.path)) {
-        const prId = createdPullRequests.get(submodule.path);
-        comment += `\n\n🔄 **Update PR:** !${prId}`;
-    }
-    
-    return comment;
-}
-
-async function addPullRequestCommentsForOutdatedSubmodules(results: SubmoduleInfo[], azDoApi: AzureDevOpsApi, createdPullRequests?: Map<string, number>): Promise<void> {
-    const outdatedSubmodules = results.filter(r => r.needsUpdate);
-    
-    if (outdatedSubmodules.length === 0) {
-        console.log('✅ No submodules need updating - no PR comments required');
-        tl.debug('No outdated submodules found, no PR comments to add');
-        return;
-    }
-
-    console.log(`💬 Adding PR comments for ${outdatedSubmodules.length} outdated submodule(s)...`);
-
-    for (const submodule of outdatedSubmodules) {
-        const commentContent = createPullRequestCommentContent(submodule, createdPullRequests);
-        const added = await azDoApi.addPullRequestCommentIfNotExists(commentContent);
-        
-        if (added) {
-            console.log(`  ✅ Added PR comment for ${submodule.path}`);
-        } else {
-            console.log(`  ℹ️ PR comment already exists for ${submodule.path}`);
-        }
-    }
-}
+import { PullRequestCommentManager } from './PullRequestCommentManager';
 
 async function createPullRequestsForOutdatedSubmodules(
     submodules: SubmoduleInfo[], 
@@ -287,7 +252,8 @@ async function run(): Promise<void> {
             try {
                 const azDoApi = new AzureDevOpsApi();
                 if (azDoApi.isPullRequest()) {
-                    await addPullRequestCommentsForOutdatedSubmodules(submodules, azDoApi, createdPullRequests);
+                    const commentManager = new PullRequestCommentManager();
+                    await commentManager.addPullRequestCommentsForOutdatedSubmodules(submodules, azDoApi, createdPullRequests);
                 } else {
                     console.log(`ℹ️  Build reason (${process.env.BUILD_REASON || 'unknown'}) indicates this is not a Pull Request - no PR to add comments to`);
                     tl.debug('Not running in a Pull Request build, skipping PR comments');
