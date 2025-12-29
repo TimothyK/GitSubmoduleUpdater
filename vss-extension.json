@@ -53,6 +53,9 @@
     },
     "support": {
       "uri": "https://github.com/TimothyK/GitSubmoduleUpdater/issues"
+    },
+    "privacypolicy": {
+      "uri": "https://github.com/TimothyK/GitSubmoduleUpdater/blob/main/PRIVACY.md"
     }
   },
   "repository": {
