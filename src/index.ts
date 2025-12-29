@@ -374,16 +374,34 @@ async function addPullRequestCommentsForOutdatedSubmodules(results: SubmoduleInf
 
 async function createPullRequestsForOutdatedSubmodules(
     submodules: SubmoduleInfo[], 
-    azDoApi: AzureDevOpsApi, 
-    workingDirectory: string,
-    currentPR: any
+    workingDirectory: string
 ): Promise<Map<string, number>> {
     const outdatedSubmodules = submodules.filter(r => r.needsUpdate);
     const createdPRs = new Map<string, number>();
     
     if (outdatedSubmodules.length === 0) {
-        console.log('ℹ️  All submodules are up to date - no PRs to create');
+        console.log('ℹ️ All submodules are up to date - no PRs to create');
         return createdPRs;
+    }
+
+    const azDoApi = new AzureDevOpsApi();
+    if (!azDoApi.isPullRequest()) {
+        const buildReason = process.env.BUILD_REASON || 'unknown';
+        console.log(`ℹ️  Build reason (${buildReason}) indicates this is not a Pull Request - no PR creation needed`);
+        tl.debug('Not running in a Pull Request build context, skipping PR creation');
+        return createdPRs;
+    }
+
+    // Get PR information from API
+    console.log(`🔍 Fetching PR information from Azure DevOps API...`);
+    let currentPR: any;
+    try {
+        currentPR = await azDoApi.getCurrentPullRequest();
+        console.log(`✅ Retrieved PR information: Source Branch: ${currentPR.sourceRefName}`);
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.log(`⚠️  Failed to fetch PR information: ${errorMessage}`);
+        throw new Error(`Cannot create PRs without current PR information: ${errorMessage}`);
     }
 
     console.log(`🚀 Creating PRs for ${outdatedSubmodules.length} outdated submodule(s)`);
@@ -594,27 +612,7 @@ async function run(): Promise<void> {
         console.log(`🔄 Create Pull Requests for Updates: ${createPullRequests}`);
         if (createPullRequests) {
             try {
-                const azDoApi = new AzureDevOpsApi();
-
-                if (azDoApi.isPullRequest()) {
-                    // Get PR information from API
-                    console.log(`🔍 Fetching PR information from Azure DevOps API...`);
-                    let currentPR: any;
-                    try {
-                        currentPR = await azDoApi.getCurrentPullRequest();
-                        console.log(`✅ Retrieved PR information: Source Branch: ${currentPR.sourceRefName}`);
-                    } catch (error) {
-                        const errorMessage = error instanceof Error ? error.message : String(error);
-                        console.log(`⚠️  Failed to fetch PR information: ${errorMessage}`);
-                        throw new Error(`Cannot create PRs without current PR information: ${errorMessage}`);
-                    }
-                                        
-                    createdPullRequests = await createPullRequestsForOutdatedSubmodules(submodules, azDoApi, workingDirectory, currentPR);
-                } else {
-                    const buildReason = process.env.BUILD_REASON || 'unknown';
-                    console.log(`ℹ️  Build reason (${buildReason}) indicates this is not a Pull Request - no PR creation needed`);
-                    tl.debug('Not running in a Pull Request build context, skipping PR creation');
-                }
+                createdPullRequests = await createPullRequestsForOutdatedSubmodules(submodules, workingDirectory);
             } catch (error) {
                 tl.warning(`Failed to create PRs: ${error instanceof Error ? error.message : String(error)}`);
             }
