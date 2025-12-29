@@ -499,6 +499,17 @@ async function createOrFindPullRequestForSubmodule(
         };
         
         const pullRequest = await azDoApi.createPullRequest(prRequest);
+        
+        // Set auto-complete with delete source branch option
+        if (createdBy) {
+            try {
+                await azDoApi.setAutoComplete(pullRequest.pullRequestId, createdBy, true);
+                console.log(`✅ Auto-complete enabled for PR #${pullRequest.pullRequestId}`);
+            } catch (autoCompleteError) {
+                console.log(`⚠️  Warning: Could not set auto-complete for PR #${pullRequest.pullRequestId}: ${autoCompleteError instanceof Error ? autoCompleteError.message : String(autoCompleteError)}`);
+            }
+        }
+        
         return pullRequest.pullRequestId;
         
     } catch (error) {

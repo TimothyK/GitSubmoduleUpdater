@@ -300,4 +300,29 @@ export class AzureDevOpsApi {
             throw new Error(`Failed to find open pull request by source branch: ${errorMessage}`);
         }
     }
+
+    public async setAutoComplete(pullRequestId: number, autoCompleteSetById: string, deleteSourceBranch: boolean = true): Promise<void> {
+        const updateRequest = {
+            autoCompleteSetBy: {
+                id: autoCompleteSetById
+            },
+            completionOptions: {
+                deleteSourceBranch: deleteSourceBranch,
+                squashMerge: false,
+                bypassPolicy: false,
+                bypassReason: ''
+            }
+        };
+        
+        const body = JSON.stringify(updateRequest);
+        const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullrequests/${pullRequestId}?api-version=6.0`;
+        
+        try {
+            await this.makeApiCall(queryString, 'PATCH', body);
+            tl.debug(`Auto-complete set for PR #${pullRequestId}`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            throw new Error(`Failed to set auto-complete for PR #${pullRequestId}: ${errorMessage}`);
+        }
+    }
 }
