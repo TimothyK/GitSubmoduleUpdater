@@ -508,14 +508,7 @@ async function createOrFindPullRequestForSubmodule(
         
         // Stage and commit the changes
         await git.add(`${submodule.path}`);
-        
-        // Build commit message with tags
-        const currentCommitShort = submodule.currentCommitSha;
-        const latestCommitShort = submodule.latestCommitSha;
-        const currentTagsText = submodule.currentTags.length > 0 ? ` [${submodule.currentTags.join(', ')}]` : '';
-        const latestTagsText = submodule.latestTags.length > 0 ? ` [${submodule.latestTags.join(', ')}]` : '';
-        
-        const commitMessage = `Update submodule ${submodule.path}\n\nUpdate from ${currentCommitShort}${currentTagsText} to ${latestCommitShort}${latestTagsText}`;
+        const commitMessage = `Update submodule ${submodule.path}\n\nUpdate from ${submodule.currentDisplayVersion} to ${submodule.latestDisplayVersion}`;
         await git.commit(commitMessage);
         
         // Push the branch
