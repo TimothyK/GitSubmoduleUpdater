@@ -290,16 +290,4 @@ export class AzureDevOpsApi {
     public getPullRequestCreatedBy(): string | undefined {
         return this.environment.pullRequestCreatedBy;
     }
-
-    public static sanitizeBranchName(input: string): string {
-        // Remove or replace characters not allowed in Git branch names
-        // Git branch names cannot contain: spaces, ~, ^, :, ?, *, [, \, .., @{, //
-        return input
-            .replace(/[\/\\:*?"<>|~^[\]@{}]/g, '-')  // Replace forbidden chars with dash
-            .replace(/\s+/g, '-')                     // Replace spaces with dash
-            .replace(/\.{2,}/g, '-')                  // Replace multiple dots with dash
-            .replace(/-+/g, '-')                      // Replace multiple dashes with single dash
-            .replace(/^-+|-+$/g, '')                  // Remove leading/trailing dashes
-            .toLowerCase();                           // Convert to lowercase
-    }
 }

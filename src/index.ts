@@ -11,6 +11,8 @@ interface SubmoduleInfo {
     branch?: string;
     currentCommit: string;
     latestCommit: string;
+    currentTags: string[];
+    latestTags: string[];
     needsUpdate: boolean;
     error?: string;
 }
@@ -71,7 +73,7 @@ class GitSubmoduleChecker {
                 console.log(`  🏷️  Latest commit: ${result.latestCommit}`);
                 
                 if (result.needsUpdate) {
-                    console.log('  ⚠️  Status: NEEDS UPDATE');
+                    console.log('  ⚠️ Status: NEEDS UPDATE');
                 } else {
                     console.log('  ✅ Status: UP TO DATE');
                 }
@@ -83,6 +85,8 @@ class GitSubmoduleChecker {
                     branch: submodule.branch,
                     currentCommit: 'unknown',
                     latestCommit: 'unknown',
+                    currentTags: [],
+                    latestTags: [],
                     needsUpdate: false,
                     error: error instanceof Error ? error.message : String(error)
                 };
@@ -155,6 +159,8 @@ class GitSubmoduleChecker {
             branch: branchToCheck,
             currentCommit: currentCommitDisplay,
             latestCommit: latestCommitDisplay,
+            currentTags: currentCommitTags,
+            latestTags: latestCommitTags,
             needsUpdate
         };
     }
@@ -288,7 +294,7 @@ class GitSubmoduleChecker {
         
         console.log(`📦 Total submodules: ${total}`);
         console.log(`✅ Up to date: ${upToDate}`);
-        console.log(`⚠️  Need updating: ${needsUpdate}`);
+        console.log(`⚠️ Need updating: ${needsUpdate}`);
         console.log(`❌ Errors: ${errors}`);
         
         if (needsUpdate > 0) {
@@ -367,48 +373,56 @@ async function addPullRequestCommentsForOutdatedSubmodules(results: SubmoduleInf
 }
 
 async function createPullRequestsForOutdatedSubmodules(
-    results: SubmoduleInfo[], 
+    submodules: SubmoduleInfo[], 
     azDoApi: AzureDevOpsApi, 
     workingDirectory: string,
     currentPR?: any
 ): Promise<Map<string, number>> {
-    const outdatedResults = results.filter(r => r.needsUpdate);
+    const outdatedSubmodules = submodules.filter(r => r.needsUpdate);
     const createdPRs = new Map<string, number>();
     
-    if (outdatedResults.length === 0) {
+    if (outdatedSubmodules.length === 0) {
         console.log('ℹ️  All submodules are up to date - no PRs to create');
         return createdPRs;
     }
 
-    console.log(`🚀 Creating PRs for ${outdatedResults.length} outdated submodule(s)`);
+    console.log(`🚀 Creating PRs for ${outdatedSubmodules.length} outdated submodule(s)`);
     
-    for (const result of outdatedResults) {
+    for (const submodule of outdatedSubmodules) {
         try {
-            const prId = await createPullRequestForSubmodule(result, azDoApi, workingDirectory, currentPR);
+            const prId = await createPullRequestForSubmodule(submodule, azDoApi, workingDirectory, currentPR);
             if (prId) {
-                createdPRs.set(result.path, prId);
-                console.log(`✅ Created PR #${prId} for submodule: ${result.path}`);
+                createdPRs.set(submodule.path, prId);
+                console.log(`✅ Created PR #${prId} for submodule: ${submodule.path}`);
             }
         } catch (error) {
-            console.log(`⚠️  Failed to create PR for ${result.path}: ${error instanceof Error ? error.message : String(error)}`);
+            console.log(`⚠️  Failed to create PR for ${submodule.path}: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
     
     return createdPRs;
 }
 
+function sanitizeForBranchName(input: string): string {
+    // Remove or replace characters not allowed in Git branch names
+    // Git branch names cannot contain: spaces, ~, ^, :, ?, *, [, \, .., @{, //
+    return input
+        .replace(/[\/\\:*?"<>|~^[\]@{}]/g, '-')  // Replace forbidden chars with dash
+        .replace(/\s+/g, '-')                     // Replace spaces with dash
+        .replace(/\.{2,}/g, '-')                  // Replace multiple dots with dash
+        .replace(/-+/g, '-')                      // Replace multiple dashes with single dash
+        .replace(/^-+|-+$/g, '')                  // Remove leading/trailing dashes
+        .toLowerCase();                           // Convert to lowercase
+}
+
 async function createPullRequestForSubmodule(
-    result: SubmoduleInfo,
+    submodule: SubmoduleInfo,
     azDoApi: AzureDevOpsApi,
     workingDirectory: string,
     currentPR?: any
 ): Promise<number | null> {
     const git = simpleGit(workingDirectory);
-    
-    // Get current commit for branch naming
-    const currentCommit = await git.raw(['rev-parse', 'HEAD']);
-    const shortCommit = currentCommit.trim().substring(0, 8);
-    
+        
     // Get the source branch to use as base
     let sourceBranch = azDoApi.getPullRequestSourceBranch();
     if (!sourceBranch && currentPR) {
@@ -418,12 +432,13 @@ async function createPullRequestForSubmodule(
         throw new Error('Cannot determine source branch - not available from environment or API');
     }
     
-    // Create branch name with source branch as prefix
-    const sanitizedPath = AzureDevOpsApi.sanitizeBranchName(result.path);
-    const cleanSourceBranch = sourceBranch.replace('refs/heads/', '');
-    const branchName = `${cleanSourceBranch}.build/Pipeline-${sanitizedPath}-${shortCommit}`;
+    // Create branch name with GitSubmoduleUpdate prefix
+    const sanitizedPath = sanitizeForBranchName(submodule.name);
+    const version = submodule.latestTags.length > 0 ? submodule.latestTags[0] : submodule.latestCommit.substring(0, 8);
+    const sanitizedVersion = sanitizeForBranchName(version);
+    const branchName = `GitSubmoduleUpdate-${sanitizedPath}-${sanitizedVersion}`;
     
-    console.log(`📝 Creating branch: ${branchName} for submodule: ${result.path}`);
+    console.log(`📝 Creating branch: ${branchName} for submodule: ${submodule.path}`);
     
     // Get the current branch to return to later
     const originalBranch = await git.raw(['rev-parse', '--abbrev-ref', 'HEAD']);
@@ -431,23 +446,31 @@ async function createPullRequestForSubmodule(
     console.log(`💾 Current branch: ${originalBranchName} (will return here after update)`);
     
     try {
-        // Check if branch already exists and delete if so
+        // Check if branch already exists
         try {
-            await git.raw(['branch', '-D', branchName]);
-            console.log(`🗑️  Deleted existing branch: ${branchName}`);
+            await git.raw(['show-ref', '--verify', `refs/heads/${branchName}`]);
+            console.log(`ℹ️  Branch ${branchName} already exists - assuming PR already exists, skipping creation`);
+            return null;
         } catch {
-            // Branch doesn't exist, which is fine
+            // Branch doesn't exist, continue with creation
         }
         
         // Create and checkout new branch
         await git.checkoutLocalBranch(branchName);
         
         // Update the specific submodule to remote
-        await git.raw(['submodule', 'update', '--remote', result.path]);
+        await git.raw(['submodule', 'update', '--remote', submodule.path]);
         
         // Stage and commit the changes
-        await git.add(`${result.path}`);
-        const commitMessage = `Update submodule ${result.path}\n\nUpdate from ${result.currentCommit.substring(0, 8)} to ${result.latestCommit.substring(0, 8)}`;
+        await git.add(`${submodule.path}`);
+        
+        // Build commit message with tags
+        const currentCommitShort = submodule.currentCommit.substring(0, 8);
+        const latestCommitShort = submodule.latestCommit.substring(0, 8);
+        const currentTagsText = submodule.currentTags.length > 0 ? ` [${submodule.currentTags.join(', ')}]` : '';
+        const latestTagsText = submodule.latestTags.length > 0 ? ` [${submodule.latestTags.join(', ')}]` : '';
+        
+        const commitMessage = `Update submodule ${submodule.path}\n\nUpdate from ${currentCommitShort}${currentTagsText} to ${latestCommitShort}${latestTagsText}`;
         await git.commit(commitMessage);
         
         // Push the branch
@@ -455,39 +478,25 @@ async function createPullRequestForSubmodule(
         console.log(`📤 Pushed branch: ${branchName}`);
         
         // Create the pull request with enhanced version information
-        const title = `Update submodule ${result.path}`;
+        const title = `Update submodule ${submodule.path} to ${sanitizedVersion}`;
         
-        // Get tag information for commits
-        let currentCommitInfo = result.currentCommit.substring(0, 8);
-        let latestCommitInfo = result.latestCommit.substring(0, 8);
+        // Use tag information from submodule object
+        let currentCommitInfo = submodule.currentCommit.substring(0, 8);
+        let latestCommitInfo = submodule.latestCommit.substring(0, 8);
         
-        try {
-            // Try to get tags for current commit
-            const currentTags = await git.raw(['tag', '--points-at', result.currentCommit]);
-            if (currentTags.trim()) {
-                const tags = currentTags.trim().split('\n').filter(tag => tag.trim());
-                if (tags.length > 0) {
-                    currentCommitInfo = `${tags[0]} (${result.currentCommit.substring(0, 8)})`;
-                }
-            }
-            
-            // Try to get tags for latest commit  
-            const latestTags = await git.raw(['tag', '--points-at', result.latestCommit]);
-            if (latestTags.trim()) {
-                const tags = latestTags.trim().split('\n').filter(tag => tag.trim());
-                if (tags.length > 0) {
-                    latestCommitInfo = `${tags[0]} (${result.latestCommit.substring(0, 8)})`;
-                }
-            }
-        } catch (error) {
-            // If tag lookup fails, just use commit hashes
-            console.log(`ℹ️  Could not fetch tag information for ${result.path}: ${error instanceof Error ? error.message : String(error)}`);
+        if (submodule.currentTags.length > 0) {
+            currentCommitInfo = `${submodule.currentTags[0]} (${submodule.currentCommit.substring(0, 8)})`;
         }
         
-        const description = `Automated update of submodule **${result.path}**\n\n` +
+        if (submodule.latestTags.length > 0) {
+            latestCommitInfo = `${submodule.latestTags[0]} (${submodule.latestCommit.substring(0, 8)})`;
+        }
+        
+        const description = `Automated update of submodule **[${submodule.path}](${submodule.url})**.` +
+                           `  Review the release notes of the submodule to verify if any manual changes are required for the new submodule version.\n\n` +
                            `**Current:** \`${currentCommitInfo}\`\n` +
                            `**Latest:** \`${latestCommitInfo}\`\n` +
-                           `**Branch:** \`${result.branch}\`\n\n` +
+                           `**Branch:** \`${submodule.branch}\`\n` +
                            `This PR was automatically created to keep the submodule up to date.`;
         
         const reviewers = [];
@@ -532,7 +541,9 @@ async function createPullRequestForSubmodule(
             }
         }
     }
+    
 }
+
 
 async function run(): Promise<void> {
     try {
