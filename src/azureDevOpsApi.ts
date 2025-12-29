@@ -52,8 +52,6 @@ interface AzureDevOpsEnvironment {
     buildRepositoryName: string;
     buildReason: string;
     pullRequestId?: string;
-    pullRequestSourceBranch?: string;
-    pullRequestCreatedBy?: string;
     systemAccessToken?: string;
     myAccessToken?: string;
 }
@@ -68,8 +66,6 @@ export class AzureDevOpsApi {
             buildRepositoryName: process.env.BUILD_REPOSITORY_NAME || '',
             buildReason: process.env.BUILD_REASON || '',
             pullRequestId: process.env.SYSTEM_PULLREQUEST_PULLREQUESTID,
-            pullRequestSourceBranch: process.env.SYSTEM_PULLREQUEST_SOURCEBRANCH,
-            pullRequestCreatedBy: process.env.SYSTEM_PULLREQUEST_CREATEDBY_ID,
             systemAccessToken: process.env.SYSTEM_ACCESSTOKEN,
             myAccessToken: tl.getInput('accessToken', false) || process.env.MY_ACCESSTOKEN
         };
@@ -268,18 +264,6 @@ export class AzureDevOpsApi {
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`Failed to create pull request: ${errorMessage}`);
-        }
-    }
-
-    public async searchPullRequests(sourceBranch: string, targetBranch: string): Promise<PullRequest[]> {
-        const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullrequests?searchCriteria.sourceRefName=refs/heads/${sourceBranch}&searchCriteria.targetRefName=refs/heads/${targetBranch}&searchCriteria.status=active&api-version=6.0`;
-        
-        try {
-            const response = await this.makeApiCall(queryString);
-            return response.value || [];
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new Error(`Failed to search pull requests: ${errorMessage}`);
         }
     }
 
