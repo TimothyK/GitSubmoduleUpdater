@@ -91,7 +91,8 @@ The task sets these variables for use in subsequent tasks:
 |-------|-------------|----------|----------|
 | `failOnOutdated` | Fail the task if submodules are outdated | No | `false` |
 | `addPullRequestComments` | Add comments to pull requests for each outdated submodule | No | `true` |
-| `createPullRequests` | Automatically create PRs to update outdated submodules | No | `true` || `suppressTagNames` | Comma-separated list of PR tag names that will suppress the submodule check. If any of these tags are found on the current pull request, the submodule analysis will be skipped entirely. | No | `NoSubmoduleCheck,NoBuild` |
+| `createPullRequests` | Automatically create PRs to update outdated submodules | No | `true` |
+| `suppressTagNames` | Comma-separated list of PR tag names that will suppress the submodule check. If any of these tags are found on the current pull request, the submodule analysis will be skipped entirely. | No | `NoSubmoduleCheck,NoBuild` |
 | `workingDirectory` | Directory containing the .gitmodules file | No | `$(System.DefaultWorkingDirectory)` |
 | `defaultBranch` | Default branch name to check for latest commits on submodule repos | No | `main` |
 | `gitmodulesPath` | Path to .gitmodules file relative to working directory | No | `.gitmodules` |
