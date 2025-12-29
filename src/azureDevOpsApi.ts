@@ -325,4 +325,21 @@ export class AzureDevOpsApi {
             throw new Error(`Failed to set auto-complete for PR #${pullRequestId}: ${errorMessage}`);
         }
     }
+
+    public async getCurrentPullRequestLabels(): Promise<Array<{id: string, name: string, active: boolean}>> {
+        if (!this.environment.pullRequestId) {
+            return [];
+        }
+
+        const queryString = `/git/repositories/${this.environment.buildRepositoryName}/pullrequests/${this.environment.pullRequestId}/labels?api-version=6.0`;
+        
+        try {
+            const response = await this.makeApiCall(queryString, 'GET');
+            return response.value || [];
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            tl.debug(`Failed to get PR labels for PR #${this.environment.pullRequestId}: ${errorMessage}`);
+            return [];
+        }
+    }
 }

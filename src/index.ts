@@ -27,13 +27,15 @@ class GitSubmoduleChecker {
     private workingDirectory: string;
     private gitmodulesPath: string;
     private defaultBranch: string;
+    private suppressTagNames: string[];
 
     private git: SimpleGit;
 
-    constructor(workingDir: string, gitmodulesPath: string, defaultBranch: string = 'main') {
+    constructor(workingDir: string, gitmodulesPath: string, defaultBranch: string = 'main', suppressTagNames: string = 'NoSubmoduleCheck,NoBuild') {
         this.workingDirectory = workingDir;
         this.gitmodulesPath = path.resolve(workingDir, gitmodulesPath);
         this.defaultBranch = defaultBranch;
+        this.suppressTagNames = suppressTagNames.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
         this.git = simpleGit(workingDir);
     }
 
@@ -42,12 +44,51 @@ class GitSubmoduleChecker {
         tl.debug(`Working directory: ${this.workingDirectory}`);
         tl.debug(`Gitmodules path: ${this.gitmodulesPath}`);
         tl.debug(`Default branch: ${this.defaultBranch}`);
+        tl.debug(`Suppress tag names: ${this.suppressTagNames.join(', ')}`);
 
         console.log('🔍 Git Submodule Updater - Starting Analysis');
         console.log(`📁 Working Directory: ${this.workingDirectory}`);
         console.log(`📄 .gitmodules Path: ${this.gitmodulesPath}`);
         console.log(`🌿 Default Branch: ${this.defaultBranch}`);
+        console.log(`🚫 Suppress Tag Names: ${this.suppressTagNames.join(', ') || '(none)'}`);
         console.log('');
+
+        // Check for suppression tags on current PR
+        if (this.suppressTagNames.length > 0) {
+            try {
+                const azDoApi = new AzureDevOpsApi();
+                if (azDoApi.isPullRequest()) {
+                    console.log(`🔍 Checking PR tags for suppression...`);
+                    
+                    // Get PR labels directly
+                    const labels = await azDoApi.getCurrentPullRequestLabels();                        
+                    if (labels && labels.length > 0) {
+                        const prTagNames = labels.filter(label => label.active).map(label => label.name);
+                            
+                        const suppressTag = this.suppressTagNames.find(suppressTag => 
+                            prTagNames.some(prTag => prTag.toLowerCase() === suppressTag.toLowerCase())
+                        );
+                        
+                        if (suppressTag) {
+                            console.log(`🚫 Submodule check suppressed due to PR tag: ${suppressTag}`);
+                            console.log('✅ Skipping submodule analysis');
+                            console.log('');
+                            tl.debug(`Submodule check skipped due to PR tag: ${suppressTag}`);
+                            return [];
+                        } else {
+                            console.log(`✅ No matching suppression tags found - continuing with analysis`);
+                        }
+                    } else {
+                        console.log(`ℹ️  No labels found on PR - continuing with analysis`);
+                    }
+                } else {
+                    console.log(`ℹ️  Not running in PR context - suppression check skipped`);
+                }
+            } catch (error) {
+                console.log(`⚠️  Could not check PR tags for suppression: ${error instanceof Error ? error.message : String(error)}`);
+                tl.debug(`Failed to check PR tags, continuing with normal analysis: ${error}`);
+            }
+        }
 
         if (!fs.existsSync(this.gitmodulesPath)) {
             tl.warning(`No .gitmodules file found at ${this.gitmodulesPath}`);
@@ -70,7 +111,7 @@ class GitSubmoduleChecker {
                 
                 console.log(`  📍 URL: ${result.url}`);
                 console.log(`  📌 Current commit: ${result.currentCommit}`);
-                console.log(`  🏷️  Latest commit: ${result.latestCommit}`);
+                console.log(`  🏷️ Latest commit:  ${result.latestCommit}`);
                 
                 if (result.needsUpdate) {
                     console.log('  ⚠️ Status: NEEDS UPDATE');
@@ -403,7 +444,7 @@ async function createPullRequestsForOutdatedSubmodules(
         console.log(`⚠️  Failed to fetch PR information: ${errorMessage}`);
         throw new Error(`Cannot create PRs without current PR information: ${errorMessage}`);
     }
-
+                        
     console.log(`🚀 Creating PRs for ${outdatedSubmodules.length} outdated submodule(s)`);
     
     for (const submodule of outdatedSubmodules) {
@@ -602,9 +643,10 @@ async function run(): Promise<void> {
         const failOnOutdated = tl.getBoolInput('failOnOutdated') || false;
         const addPullRequestComments = tl.getBoolInput('addPullRequestComments') ?? true;
         const createPullRequests = tl.getBoolInput('createPullRequests') ?? true;
-        tl.debug(`Task inputs - workingDirectory: ${workingDirectory}, gitmodulesPath: ${gitmodulesPath}, defaultBranch: ${defaultBranch}, failOnOutdated: ${failOnOutdated}, addPullRequestComments: ${addPullRequestComments}, createPullRequests: ${createPullRequests}`);
+        const suppressTagNames = tl.getInput('suppressTagNames') || 'NoSubmoduleCheck,NoBuild';
+        tl.debug(`Task inputs - workingDirectory: ${workingDirectory}, gitmodulesPath: ${gitmodulesPath}, defaultBranch: ${defaultBranch}, failOnOutdated: ${failOnOutdated}, addPullRequestComments: ${addPullRequestComments}, createPullRequests: ${createPullRequests}, suppressTagNames: ${suppressTagNames}`);
 
-        const checker = new GitSubmoduleChecker(workingDirectory, gitmodulesPath, defaultBranch);
+        const checker = new GitSubmoduleChecker(workingDirectory, gitmodulesPath, defaultBranch, suppressTagNames);
         const submodules = await checker.checkSubmodules();
 
         // Create PRs for updates if enabled and in a pull request build

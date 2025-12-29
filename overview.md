@@ -11,8 +11,9 @@ A powerful Azure DevOps pipeline task that automatically checks your git submodu
   - **Flexible Branch Support**: If the submodule branch is not given in the `.gitmodules` file, the `main` branch is assumed.  But this can be overridden.
 - **Pull Request Integration**: Automatically adds comments to PRs highlighting outdated submodules
   - **Hyperlinks**: The PR Comment has a hyperlink to the submodule.  Its release notes can be reviewed to check for breaking changes in the update.
+  - **Disabling**: Pull requests can easily skip the submodule check by adding a PR Tag of `NoSubmoduleCheck`, `NoBuild`, or any configurable tag name.
 - **Automatic Pull Request Creation**: Creates PRs to update outdated submodules
-  - **Smart Branch Management**: Creates branches with format `{source-branch}.build/Pipeline-{submodule-path}-{commit}`
+  - **Smart Branch Management**: Creates branches with format `GitSubmoduleUpdate-{submodule-path}-{version}`
   - **Automated Updates**: Updates submodules to latest remote commits and creates commits
   - **Intelligent Targeting**: Targets the current PR's source branch and adds original author as reviewer
   - **Linked Comments**: PR comments include links to created update PRs
@@ -35,6 +36,7 @@ steps:
     failOnOutdated: false
     addPullRequestComments: true
     createPullRequests: true
+    suppressTagNames: 'NoSubmoduleCheck,NoBuild'
 ```
 
 ### Complete Example with Conditional Updates
@@ -51,6 +53,8 @@ steps:
   inputs:
     failOnOutdated: false
     addPullRequestComments: true
+    createPullRequests: true
+    suppressTagNames: 'NoSubmoduleCheck,NoBuild'
 
 # Display results
 - script: |
@@ -59,13 +63,6 @@ steps:
     echo "Need updating: $(SubmodulesNeedingUpdate)"
     echo "Outdated submodules: $(SubmodulesNeedingUpdateList)"
   displayName: 'Show Submodule Status'
-
-# Conditionally update outdated submodules
-- script: |
-    echo "Updating outdated submodules..."
-    git submodule update --remote --merge
-  displayName: 'Update Outdated Submodules'
-  condition: gt(variables['SubmodulesNeedingUpdate'], 0)
 ```
 
 ## ⚙️ Task Inputs
@@ -75,6 +72,7 @@ steps:
 | `failOnOutdated` | Fail the task if submodules are outdated | No | `false` |
 | `addPullRequestComments` | Add comments to pull requests for each outdated submodule | No | `true` |
 | `createPullRequests` | Automatically create PRs to update outdated submodules | No | `true` |
+| `suppressTagNames` | Comma-separated list of PR tag names that will suppress the submodule check. If any of these tags are found on the current pull request, the submodule analysis will be skipped entirely. | No | `NoSubmoduleCheck,NoBuild` |
 | `workingDirectory` | Directory containing the .gitmodules file | No | `$(System.DefaultWorkingDirectory)` |
 | `defaultBranch` | Default branch name to check for latest commits on submodule repos | No | `main` |
 | `gitmodulesPath` | Path to .gitmodules file relative to working directory | No | `.gitmodules` |
@@ -96,25 +94,28 @@ The task sets these variables for use in subsequent tasks:
 📁 Working Directory: D:\a\1\s
 📄 .gitmodules Path: D:\a\1\s\.gitmodules  
 🌿 Default Branch: main
+🚫 Suppress Tag Names: NoSubmoduleCheck, NoBuild
 
+🔍 Checking PR tags for suppression...
+ℹ️  No labels found on PR - continuing with analysis
 📦 Found 3 submodule(s) configured in .gitmodules
 
 [1/3] Checking submodule: libs/common
   📍 URL: https://github.com/myorg/common-lib.git
   📌 Current commit: a1b2c3d4 (v1.8.5)
-  🏷️  Latest commit: x1y2z3a4 (v2.1.0, v2.0.8)
-  ⚠️  Status: NEEDS UPDATE
+  🏷️ Latest commit:  x1y2z3a4 (v2.1.0, v2.0.8)
+  ⚠️ Status: NEEDS UPDATE
 
 [2/3] Checking submodule: libs/utils
   📍 URL: https://github.com/myorg/utils-lib.git
   📌 Current commit: p9o8n7m6 (v4.2.1, v4.2.0 +1 more)
-  🏷️  Latest commit: p9o8n7m6 (v4.2.1, v4.2.0 +1 more)
+  🏷️ Latest commit:  p9o8n7m6 (v4.2.1, v4.2.0 +1 more)
   ✅ Status: UP TO DATE
 
 [3/3] Checking submodule: vendor/third-party
   📍 URL: https://github.com/external/library.git
   📌 Current commit: m3n4o5p6 (v0.9.12)
-  🏷️  Latest commit: m3n4o5p6 (v0.9.12)
+  🏷️ Latest commit:  m3n4o5p6 (v0.9.12)
   ✅ Status: UP TO DATE
 
 📊 SUMMARY
@@ -128,6 +129,17 @@ The task sets these variables for use in subsequent tasks:
    • libs/common: a1b2c3d4 (v1.8.5) → x1y2z3a4 (v2.1.0, v2.0.8)
 ══════════════════════════════════════════════════
 
+🔄 Create Pull Requests for Updates: true
+🔍 Fetching PR information from Azure DevOps API...
+✅ Retrieved PR information: Source Branch: refs/heads/MyAwesomeFeature
+🚀 Creating PRs for 1 outdated submodule(s)
+📝 Creating branch: GitSubmoduleUpdate-libs-common-2.1.0 for submodule: .mysubmodule
+💾 Current branch: MyAwesomeFeature (will return here after update)
+📤 Pushed branch: GitSubmoduleUpdate-libs-common-2.1.0
+✅ Auto-complete enabled for PR #11
+🔙 Returning to original branch: MyAwesomeFeature
+✅ Created or found PR #67 for submodule: .mysubmodule
+
 💬 Add Pull Request Comments: true
 💬 Adding PR comments for 1 outdated submodule(s)...
   ✅ Added PR comment for libs/common
@@ -139,6 +151,8 @@ The task sets these variables for use in subsequent tasks:
 2. **Get Current State**: Uses `git ls-tree` to find the commit currently referenced by your main repository
 3. **Check Remote**: Uses `git ls-remote` to find the latest commit on the specified branch of each submodule
 4. **Compare & Report**: Compares commits and provides detailed output with update recommendations
+5. **Create PRs**: Optionally creates a PR for any outdated submodule to be merged into the PR's source branch on your approval.
+6. **PR Comments**: Creates PR Comments alerting to any outdated submodules.
 
 ## 🔧 Requirements
 
@@ -146,6 +160,7 @@ The task sets these variables for use in subsequent tasks:
 - Git repository with submodules configured in `.gitmodules`
 - Network access to submodule repositories
 - Agent with Git installed (standard on Microsoft-hosted agents)
+- The build agent needs permission to comment on and create pull requests, if those features are enabled.
 
 ## 🤝 Support
 

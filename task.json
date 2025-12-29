@@ -46,6 +46,14 @@
       "helpMarkDown": "When enabled, automatically creates pull requests to update outdated submodules. Creates a branch named `{source-branch}.build/Pipeline-{submodule-path}-{commit}`, updates the submodule to the latest remote commit, and creates a PR targeting the current PR's source branch. The original PR author is added as a reviewer. Only works in pull request builds."
     },
     {
+      "name": "suppressTagNames",
+      "type": "string",
+      "label": "Suppress Tag Names",
+      "defaultValue": "NoSubmoduleCheck,NoBuild",
+      "required": false,
+      "helpMarkDown": "Comma-separated list of PR tag names that will suppress the submodule check. If any of these tags are found on the current pull request, the submodule analysis will be skipped entirely."
+    },
+    {
       "name": "workingDirectory",
       "type": "filePath",
       "label": "Working Directory",
