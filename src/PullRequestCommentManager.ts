@@ -4,7 +4,15 @@ import { SubmoduleInfo } from './SubmoduleInfo';
 
 export class PullRequestCommentManager {
 
-    public async addPullRequestCommentsForOutdatedSubmodules(submodules: SubmoduleInfo[], azDoApi: AzureDevOpsApi, createdPullRequests?: Map<string, number>): Promise<void> {
+    public async addPullRequestCommentsForOutdatedSubmodules(submodules: SubmoduleInfo[], createdPullRequests?: Map<string, number>): Promise<void> {
+        
+        const azDoApi = new AzureDevOpsApi();
+        if (!azDoApi.isPullRequest()) {
+            console.log(`ℹ️  Build reason (${process.env.BUILD_REASON || 'unknown'}) indicates this is not a Pull Request - no PR to add comments to`);
+            tl.debug('Not running in a Pull Request build, skipping PR comments');            
+            return;
+        }
+
         const outdatedSubmodules = submodules.filter(r => r.needsUpdate);
 
         if (outdatedSubmodules.length === 0) {

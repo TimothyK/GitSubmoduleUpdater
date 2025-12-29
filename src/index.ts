@@ -249,15 +249,9 @@ async function run(): Promise<void> {
         console.log(``);
         console.log(`💬 Add Pull Request Comments: ${addPullRequestComments}`);
         if (addPullRequestComments) {
-            try {
-                const azDoApi = new AzureDevOpsApi();
-                if (azDoApi.isPullRequest()) {
-                    const commentManager = new PullRequestCommentManager();
-                    await commentManager.addPullRequestCommentsForOutdatedSubmodules(submodules, azDoApi, createdPullRequests);
-                } else {
-                    console.log(`ℹ️  Build reason (${process.env.BUILD_REASON || 'unknown'}) indicates this is not a Pull Request - no PR to add comments to`);
-                    tl.debug('Not running in a Pull Request build, skipping PR comments');
-                }
+            try {                
+                const commentManager = new PullRequestCommentManager();
+                await commentManager.addPullRequestCommentsForOutdatedSubmodules(submodules, createdPullRequests);
             } catch (error) {
                 tl.warning(`Failed to add PR comments: ${error instanceof Error ? error.message : String(error)}`);
             }
