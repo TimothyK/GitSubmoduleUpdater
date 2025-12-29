@@ -411,8 +411,7 @@ function sanitizeForBranchName(input: string): string {
         .replace(/\s+/g, '-')                     // Replace spaces with dash
         .replace(/\.{2,}/g, '-')                  // Replace multiple dots with dash
         .replace(/-+/g, '-')                      // Replace multiple dashes with single dash
-        .replace(/^-+|-+$/g, '')                  // Remove leading/trailing dashes
-        .toLowerCase();                           // Convert to lowercase
+        .replace(/^-+|-+$/g, '');                  // Remove leading/trailing dashes
 }
 
 async function createOrFindPullRequestForSubmodule(
