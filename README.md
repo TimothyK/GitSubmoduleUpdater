@@ -2,8 +2,8 @@
 
 [![CI Build](https://github.com/TimothyK/GitSubmoduleUpdater/actions/workflows/ci.yml/badge.svg)](https://github.com/TimothyK/GitSubmoduleUpdater/actions/workflows/ci.yml)
 [![Release](https://github.com/TimothyK/GitSubmoduleUpdater/actions/workflows/release.yml/badge.svg)](https://github.com/TimothyK/GitSubmoduleUpdater/actions/workflows/release.yml)
-[![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/CodeMonkeyProjectiles.git-submodule-updater?label=VS%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=CodeMonkeyProjectiles.git-submodule-updater)
 [![GitHub Release](https://img.shields.io/github/v/release/TimothyK/GitSubmoduleUpdater)](https://github.com/TimothyK/GitSubmoduleUpdater/releases)
+[![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/CodeMonkeyProjectiles.git-submodule-updater?label=VS%20Marketplace)](https://marketplace.visualstudio.com/items?itemName=CodeMonkeyProjectiles.git-submodule-updater)
 
 A powerful Azure DevOps pipeline task that automatically checks your git submodules and determines which ones need updating to their latest commits.
 
