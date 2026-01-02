@@ -285,10 +285,69 @@ export class AzureDevOpsApi {
         }
     }
 
-    public async setAutoComplete(pullRequestId: number, autoCompleteSetById: string, deleteSourceBranch: boolean = true): Promise<void> {
+    public async getCurrentUser(): Promise<{ id: string; displayName: string; uniqueName: string }> {
+        // Try to get user information from Azure DevOps pipeline variables first
+        // These are more reliable than API calls, especially for on-premises installations
+        const requestedForId = tl.getVariable('Build.RequestedForId');
+        const requestedFor = tl.getVariable('Build.RequestedFor');
+        const requestedForEmail = tl.getVariable('Build.RequestedForEmail');
+        
+        if (requestedForId) {
+            tl.debug(`Using pipeline variables for current user: ${requestedForId} (${requestedFor})`);
+            return {
+                id: requestedForId,
+                displayName: requestedFor || '',
+                uniqueName: requestedForEmail || ''
+            };
+        }
+
+        // Fallback: Try the connection data endpoint with preview API version
+        try {
+            const queryString = `/_apis/connectionData?api-version=6.0-preview`;
+            const response = await this.makeApiCall(queryString, 'GET');
+            
+            if (response && response.authenticatedUser && response.authenticatedUser.id) {
+                tl.debug('Using connection data endpoint for current user');
+                const user = response.authenticatedUser;
+                const accountName = user.properties?.Account?.$value || '';
+                return {
+                    id: user.id,
+                    displayName: user.providerDisplayName || '',
+                    uniqueName: accountName
+                };
+            }
+        } catch (error) {
+            tl.debug(`Connection data endpoint failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+
+        // Final fallback: If we're in a PR context, use the current PR's creator as the user
+        // This assumes the person running the task has the same permissions as the PR creator
+        if (this.environment.pullRequestId) {
+            try {
+                const currentPR = await this.getCurrentPullRequest();
+                if (currentPR && currentPR.createdBy && currentPR.createdBy.id) {
+                    tl.debug('Using current PR creator as fallback user for auto-complete');
+                    return {
+                        id: currentPR.createdBy.id,
+                        displayName: currentPR.createdBy.displayName || '',
+                        uniqueName: currentPR.createdBy.uniqueName || ''
+                    };
+                }
+            } catch (error) {
+                tl.debug(`Could not get current PR for fallback user: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        }
+
+        throw new Error('Unable to determine current authenticated user. All user identification methods failed.');
+    }
+
+    public async setAutoComplete(pullRequestId: number, deleteSourceBranch: boolean = true): Promise<void> {
+        // Get the current authenticated user (PAT owner)
+        const currentUser = await this.getCurrentUser();
+        
         const updateRequest = {
             autoCompleteSetBy: {
-                id: autoCompleteSetById
+                id: currentUser.id
             },
             completionOptions: {
                 deleteSourceBranch: deleteSourceBranch,
@@ -303,7 +362,7 @@ export class AzureDevOpsApi {
         
         try {
             await this.makeApiCall(queryString, 'PATCH', body);
-            tl.debug(`Auto-complete set for PR #${pullRequestId}`);
+            tl.debug(`Auto-complete set for PR #${pullRequestId} by user ${currentUser.id}`);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`Failed to set auto-complete for PR #${pullRequestId}: ${errorMessage}`);
