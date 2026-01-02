@@ -286,28 +286,16 @@ export class AzureDevOpsApi {
     }
 
     public async getCurrentUser(): Promise<{ id: string; displayName: string; uniqueName: string }> {
-        // Try to get user information from Azure DevOps pipeline variables first
-        // These are more reliable than API calls, especially for on-premises installations
-        const requestedForId = tl.getVariable('Build.RequestedForId');
-        const requestedFor = tl.getVariable('Build.RequestedFor');
-        const requestedForEmail = tl.getVariable('Build.RequestedForEmail');
+        // For auto-complete to work properly, we need the authenticated user (token owner)
+        // not necessarily the user who requested the build
         
-        if (requestedForId) {
-            tl.debug(`Using pipeline variables for current user: ${requestedForId} (${requestedFor})`);
-            return {
-                id: requestedForId,
-                displayName: requestedFor || '',
-                uniqueName: requestedForEmail || ''
-            };
-        }
-
-        // Fallback: Try the connection data endpoint with preview API version
+        // Try the connection data endpoint first - this gives us the actual authenticated user
         try {
             const queryString = `/_apis/connectionData?api-version=6.0-preview`;
             const response = await this.makeApiCall(queryString, 'GET');
             
             if (response && response.authenticatedUser && response.authenticatedUser.id) {
-                tl.debug('Using connection data endpoint for current user');
+                tl.debug('Using connection data endpoint for authenticated user');
                 const user = response.authenticatedUser;
                 const accountName = user.properties?.Account?.$value || '';
                 return {
@@ -318,6 +306,20 @@ export class AzureDevOpsApi {
             }
         } catch (error) {
             tl.debug(`Connection data endpoint failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+
+        // Fallback to pipeline variables (user who requested the build)
+        const requestedForId = tl.getVariable('Build.RequestedForId');
+        const requestedFor = tl.getVariable('Build.RequestedFor');
+        const requestedForEmail = tl.getVariable('Build.RequestedForEmail');
+        
+        if (requestedForId) {
+            tl.debug(`Using pipeline variables for user: ${requestedForId} (${requestedFor})`);
+            return {
+                id: requestedForId,
+                displayName: requestedFor || '',
+                uniqueName: requestedForEmail || ''
+            };
         }
 
         // Final fallback: If we're in a PR context, use the current PR's creator as the user
