@@ -99,10 +99,31 @@ export class AzureDevOpsApi {
         return `${this.environment.teamFoundationServerUri}${this.environment.teamProjectId}/_apis`;
     }
 
-    private async makeApiCall(queryString: string, method: string = 'GET', body?: string): Promise<any> {
+    private getIdentityBaseUrl(): string {
+        // ConnectionData API uses different URLs for cloud vs on-premises
+        const serverUri = this.environment.teamFoundationServerUri;
+        
+        // For cloud (dev.azure.com), use vssps.dev.azure.com without project
+        if (serverUri.includes('dev.azure.com')) {
+            const orgMatch = serverUri.match(/https:\/\/dev\.azure\.com\/([^\/]+)/);
+            if (orgMatch && orgMatch[1]) {
+                return `https://vssps.dev.azure.com/${orgMatch[1]}/_apis`;
+            }
+        }
+        
+        // For on-premises, use same server without project
+        const baseServerUri = serverUri.endsWith('/') ? serverUri.slice(0, -1) : serverUri;
+        return `${baseServerUri}/_apis`;
+    }
+
+    private async makeIdentityApiCall(queryString: string, method: string = 'GET', body?: string): Promise<any> {
+        const baseUrl = this.getIdentityBaseUrl();
+        const url = baseUrl + queryString;
+        return this.makeHttpRequest(url, method, body);
+    }
+
+    private async makeHttpRequest(url: string, method: string = 'GET', body?: string): Promise<any> {
         return new Promise((resolve, reject) => {
-            const baseUrl = this.getApiBaseUrl();
-            const url = baseUrl + queryString;
             const parsedUrl = new URL(url);
             
             const headers: { [key: string]: string } = {
@@ -155,6 +176,12 @@ export class AzureDevOpsApi {
 
             req.end();
         });
+    }
+
+    private async makeApiCall(queryString: string, method: string = 'GET', body?: string): Promise<any> {
+        const baseUrl = this.getApiBaseUrl();
+        const url = baseUrl + queryString;
+        return this.makeHttpRequest(url, method, body);
     }
 
     public isPullRequest(): boolean {
@@ -291,9 +318,10 @@ export class AzureDevOpsApi {
         // not necessarily the user who requested the build
         
         // Try the connection data endpoint first - this gives us the actual authenticated user
+        // Note: connectionData uses different base URLs for cloud vs on-premises
         try {
-            const queryString = `/_apis/connectionData?api-version=6.0-preview`;
-            const response = await this.makeApiCall(queryString, 'GET');
+            const queryString = `/connectionData?api-version=6.0-preview`;
+            const response = await this.makeIdentityApiCall(queryString, 'GET');
             
             if (response && response.authenticatedUser && response.authenticatedUser.id) {
                 debugLog('Using connection data endpoint for authenticated user');
@@ -309,45 +337,14 @@ export class AzureDevOpsApi {
             debugLog(`Connection data endpoint failed: ${error instanceof Error ? error.message : String(error)}`);
         }
 
-        // Fallback to pipeline variables (user who requested the build)
-        const requestedForId = tl.getVariable('Build.RequestedForId');
-        const requestedFor = tl.getVariable('Build.RequestedFor');
-        const requestedForEmail = tl.getVariable('Build.RequestedForEmail');
-        
-        if (requestedForId) {
-            debugLog(`Using pipeline variables for user: ${requestedForId} (${requestedFor})`);
-            return {
-                id: requestedForId,
-                displayName: requestedFor || '',
-                uniqueName: requestedForEmail || ''
-            };
-        }
-
-        // Final fallback: If we're in a PR context, use the current PR's creator as the user
-        // This assumes the person running the task has the same permissions as the PR creator
-        if (this.environment.pullRequestId) {
-            try {
-                const currentPR = await this.getCurrentPullRequest();
-                if (currentPR && currentPR.createdBy && currentPR.createdBy.id) {
-                    debugLog('Using current PR creator as fallback user for auto-complete');
-                    return {
-                        id: currentPR.createdBy.id,
-                        displayName: currentPR.createdBy.displayName || '',
-                        uniqueName: currentPR.createdBy.uniqueName || ''
-                    };
-                }
-            } catch (error) {
-                debugLog(`Could not get current PR for fallback user: ${error instanceof Error ? error.message : String(error)}`);
-            }
-        }
-
         throw new Error('Unable to determine current authenticated user. All user identification methods failed.');
     }
 
     public async setAutoComplete(pullRequestId: number, deleteSourceBranch: boolean = true): Promise<void> {
-        // Get the current authenticated user (PAT owner)
+        // Get the authenticated user - this should be the user making the API call
         const currentUser = await this.getCurrentUser();
         
+        // Set auto-complete using the authenticated user's ID
         const updateRequest = {
             autoCompleteSetBy: {
                 id: currentUser.id
@@ -365,7 +362,7 @@ export class AzureDevOpsApi {
         
         try {
             await this.makeApiCall(queryString, 'PATCH', body);
-            debugLog(`Auto-complete set for PR #${pullRequestId} (using authenticated user)`);
+            debugLog(`Auto-complete set for PR #${pullRequestId} by authenticated user ${currentUser.id} (${currentUser.displayName})`);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`Failed to set auto-complete for PR #${pullRequestId}: ${errorMessage}`);
