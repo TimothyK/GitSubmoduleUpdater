@@ -36,39 +36,8 @@ export class GitSubmoduleChecker {
         console.log('');
 
         // Check for suppression tags on current PR
-        if (this.suppressTagNames.length > 0) {
-            try {
-                const azDoApi = new AzureDevOpsApi();
-                if (azDoApi.isPullRequest()) {
-                    console.log(`🔍 Checking PR tags for suppression...`);
-
-                    // Get PR labels directly
-                    const labels = await azDoApi.getCurrentPullRequestLabels();
-                    if (labels && labels.length > 0) {
-                        const prTagNames = labels.filter(label => label.active).map(label => label.name);
-
-                        const suppressTag = this.suppressTagNames.find(suppressTag => prTagNames.some(prTag => prTag.toLowerCase() === suppressTag.toLowerCase())
-                        );
-
-                        if (suppressTag) {
-                            console.log(`🚫 Submodule check suppressed due to PR tag: ${suppressTag}`);
-                            console.log('✅ Skipping submodule analysis');
-                            console.log('');
-                            tl.debug(`Submodule check skipped due to PR tag: ${suppressTag}`);
-                            return [];
-                        } else {
-                            console.log(`✅ No matching suppression tags found - continuing with analysis`);
-                        }
-                    } else {
-                        console.log(`ℹ️  No labels found on PR - continuing with analysis`);
-                    }
-                } else {
-                    console.log(`ℹ️  Not running in PR context - suppression check skipped`);
-                }
-            } catch (error) {
-                console.log(`⚠️  Could not check PR tags for suppression: ${error instanceof Error ? error.message : String(error)}`);
-                tl.debug(`Failed to check PR tags, continuing with normal analysis: ${error}`);
-            }
+        if (await this.checkForSuppressionTags()) {
+            return [];
         }
 
         if (!fs.existsSync(this.gitmodulesPath)) {
@@ -125,6 +94,48 @@ export class GitSubmoduleChecker {
         this.printSummary(results);
         this.setOutputVariables(results);
         return results;
+    }
+
+    private async checkForSuppressionTags(): Promise<boolean> {
+        if (this.suppressTagNames.length === 0) {
+            return false;
+        }
+
+        try {
+            const azDoApi = new AzureDevOpsApi();
+            if (azDoApi.isPullRequest()) {
+                console.log(`🔍 Checking PR tags for suppression...`);
+
+                // Get PR labels directly
+                const labels = await azDoApi.getCurrentPullRequestLabels();
+                if (labels && labels.length > 0) {
+                    const prTagNames = labels.filter(label => label.active).map(label => label.name);
+
+                    const suppressTag = this.suppressTagNames.find(suppressTag => 
+                        prTagNames.some(prTag => prTag.toLowerCase() === suppressTag.toLowerCase())
+                    );
+
+                    if (suppressTag) {
+                        console.log(`🚫 Submodule check suppressed due to PR tag: ${suppressTag}`);
+                        console.log('✅ Skipping submodule analysis');
+                        console.log('');
+                        tl.debug(`Submodule check skipped due to PR tag: ${suppressTag}`);
+                        return true;
+                    } else {
+                        console.log(`✅ No matching suppression tags found - continuing with analysis`);
+                    }
+                } else {
+                    console.log(`ℹ️  No labels found on PR - continuing with analysis`);
+                }
+            } else {
+                console.log(`ℹ️  Not running in PR context - suppression check skipped`);
+            }
+        } catch (error) {
+            console.log(`⚠️  Could not check PR tags for suppression: ${error instanceof Error ? error.message : String(error)}`);
+            tl.debug(`Failed to check PR tags, continuing with normal analysis: ${error}`);
+        }
+
+        return false;
     }
 
     private parseGitmodules(): GitmodulesEntry[] {
