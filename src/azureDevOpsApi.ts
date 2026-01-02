@@ -1,5 +1,6 @@
 import * as tl from 'azure-pipelines-task-lib/task';
 import * as https from 'https';
+import { debugLog } from './utils';
 
 export interface PullRequestComment {
     id: number;
@@ -78,7 +79,7 @@ export class AzureDevOpsApi {
             taskLibToken = tl.getEndpointAuthorizationParameter('SYSTEMVSSCONNECTION', 'AccessToken', false) || null;
         } catch (error) {
             // This will fail in local debug mode, which is expected
-            tl.debug('Azure DevOps service connection token not available (likely running in debug mode)');
+            debugLog('Azure DevOps service connection token not available (likely running in debug mode)');
         }
         
         if (taskLibToken) {
@@ -121,7 +122,7 @@ export class AzureDevOpsApi {
                 headers: headers
             };
 
-            tl.debug(`${method} ${url}`);
+            debugLog(`${method} ${url}`);
 
             const req = https.request(options, (res) => {
                 let data = '';
@@ -202,7 +203,7 @@ export class AzureDevOpsApi {
     public async addPullRequestCommentIfNotExists(commentContent: string): Promise<boolean> {
         try {
             // Get existing comments
-            tl.debug('Checking for existing PR comments...');
+            debugLog('Checking for existing PR comments...');
             const commentsResponse = await this.getPullRequestComments();
             
             // Check if comment already exists
@@ -211,14 +212,14 @@ export class AzureDevOpsApi {
             );
 
             if (hasComment) {
-                tl.debug(`Comment already exists: ${commentContent.substring(0, 50)}...`);
+                debugLog(`Comment already exists: ${commentContent.substring(0, 50)}...`);
                 return false;
             }
 
             // Add the comment
-            tl.debug('Adding new PR comment...');
+            debugLog('Adding new PR comment...');
             await this.addPullRequestComment(commentContent);
-            tl.debug(`Added PR comment: ${commentContent.substring(0, 50)}...`);
+            debugLog(`Added PR comment: ${commentContent.substring(0, 50)}...`);
             return true;
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -295,7 +296,7 @@ export class AzureDevOpsApi {
             const response = await this.makeApiCall(queryString, 'GET');
             
             if (response && response.authenticatedUser && response.authenticatedUser.id) {
-                tl.debug('Using connection data endpoint for authenticated user');
+                debugLog('Using connection data endpoint for authenticated user');
                 const user = response.authenticatedUser;
                 const accountName = user.properties?.Account?.$value || '';
                 return {
@@ -305,7 +306,7 @@ export class AzureDevOpsApi {
                 };
             }
         } catch (error) {
-            tl.debug(`Connection data endpoint failed: ${error instanceof Error ? error.message : String(error)}`);
+            debugLog(`Connection data endpoint failed: ${error instanceof Error ? error.message : String(error)}`);
         }
 
         // Fallback to pipeline variables (user who requested the build)
@@ -314,7 +315,7 @@ export class AzureDevOpsApi {
         const requestedForEmail = tl.getVariable('Build.RequestedForEmail');
         
         if (requestedForId) {
-            tl.debug(`Using pipeline variables for user: ${requestedForId} (${requestedFor})`);
+            debugLog(`Using pipeline variables for user: ${requestedForId} (${requestedFor})`);
             return {
                 id: requestedForId,
                 displayName: requestedFor || '',
@@ -328,7 +329,7 @@ export class AzureDevOpsApi {
             try {
                 const currentPR = await this.getCurrentPullRequest();
                 if (currentPR && currentPR.createdBy && currentPR.createdBy.id) {
-                    tl.debug('Using current PR creator as fallback user for auto-complete');
+                    debugLog('Using current PR creator as fallback user for auto-complete');
                     return {
                         id: currentPR.createdBy.id,
                         displayName: currentPR.createdBy.displayName || '',
@@ -336,7 +337,7 @@ export class AzureDevOpsApi {
                     };
                 }
             } catch (error) {
-                tl.debug(`Could not get current PR for fallback user: ${error instanceof Error ? error.message : String(error)}`);
+                debugLog(`Could not get current PR for fallback user: ${error instanceof Error ? error.message : String(error)}`);
             }
         }
 
@@ -364,7 +365,7 @@ export class AzureDevOpsApi {
         
         try {
             await this.makeApiCall(queryString, 'PATCH', body);
-            tl.debug(`Auto-complete set for PR #${pullRequestId} by user ${currentUser.id}`);
+            debugLog(`Auto-complete set for PR #${pullRequestId} (using authenticated user)`);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             throw new Error(`Failed to set auto-complete for PR #${pullRequestId}: ${errorMessage}`);
@@ -383,7 +384,7 @@ export class AzureDevOpsApi {
             return response.value || [];
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            tl.debug(`Failed to get PR labels for PR #${this.environment.pullRequestId}: ${errorMessage}`);
+            debugLog(`Failed to get PR labels for PR #${this.environment.pullRequestId}: ${errorMessage}`);
             return [];
         }
     }

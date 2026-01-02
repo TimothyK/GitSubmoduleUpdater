@@ -1,6 +1,7 @@
 import * as tl from 'azure-pipelines-task-lib';
 import { AzureDevOpsApi } from './azureDevOpsApi';
 import { SubmoduleInfo } from './SubmoduleInfo';
+import { debugLog } from './utils';
 
 export class PullRequestCommentManager {
 
@@ -9,7 +10,7 @@ export class PullRequestCommentManager {
         const azDoApi = new AzureDevOpsApi();
         if (!azDoApi.isPullRequest()) {
             console.log(`ℹ️  Build reason (${process.env.BUILD_REASON || 'unknown'}) indicates this is not a Pull Request - no PR to add comments to`);
-            tl.debug('Not running in a Pull Request build, skipping PR comments');            
+            debugLog('Not running in a Pull Request build, skipping PR comments');            
             return;
         }
 
@@ -17,7 +18,7 @@ export class PullRequestCommentManager {
 
         if (outdatedSubmodules.length === 0) {
             console.log('✅ No submodules need updating - no PR comments required');
-            tl.debug('No outdated submodules found, no PR comments to add');
+            debugLog('No outdated submodules found, no PR comments to add');
             return;
         }
 

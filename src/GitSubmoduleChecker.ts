@@ -4,6 +4,7 @@ import * as path from 'path';
 import simpleGit, { SimpleGit } from 'simple-git';
 import { AzureDevOpsApi } from './azureDevOpsApi';
 import { SubmoduleInfo } from './SubmoduleInfo';
+import { debugLog } from './utils';
 
 export class GitSubmoduleChecker {
     private workingDirectory: string;
@@ -22,11 +23,11 @@ export class GitSubmoduleChecker {
     }
 
     public async checkSubmodules(): Promise<SubmoduleInfo[]> {
-        tl.debug(`Starting Git Submodule Updater analysis`);
-        tl.debug(`Working directory: ${this.workingDirectory}`);
-        tl.debug(`Gitmodules path: ${this.gitmodulesPath}`);
-        tl.debug(`Default branch: ${this.defaultBranch}`);
-        tl.debug(`Suppress tag names: ${this.suppressTagNames.join(', ')}`);
+        debugLog(`Starting Git Submodule Updater analysis`);
+        debugLog(`Working directory: ${this.workingDirectory}`);
+        debugLog(`Gitmodules path: ${this.gitmodulesPath}`);
+        debugLog(`Default branch: ${this.defaultBranch}`);
+        debugLog(`Suppress tag names: ${this.suppressTagNames.join(', ')}`);
 
         console.log('🔍 Git Submodule Updater - Starting Analysis');
         console.log(`📁 Working Directory: ${this.workingDirectory}`);
@@ -119,7 +120,7 @@ export class GitSubmoduleChecker {
                         console.log(`🚫 Submodule check suppressed due to PR tag: ${suppressTag}`);
                         console.log('✅ Skipping submodule analysis');
                         console.log('');
-                        tl.debug(`Submodule check skipped due to PR tag: ${suppressTag}`);
+                        debugLog(`Submodule check skipped due to PR tag: ${suppressTag}`);
                         return true;
                     } else {
                         console.log(`✅ No matching suppression tags found - continuing with analysis`);
@@ -132,7 +133,7 @@ export class GitSubmoduleChecker {
             }
         } catch (error) {
             console.log(`⚠️  Could not check PR tags for suppression: ${error instanceof Error ? error.message : String(error)}`);
-            tl.debug(`Failed to check PR tags, continuing with normal analysis: ${error}`);
+            debugLog(`Failed to check PR tags, continuing with normal analysis: ${error}`);
         }
 
         return false;
@@ -301,7 +302,7 @@ export class GitSubmoduleChecker {
                 return b.localeCompare(a);
             });
         } catch (error) {
-            tl.debug(`Could not fetch tags for commit ${commitSha} from ${repoUrl}: ${error}`);
+            debugLog(`Could not fetch tags for commit ${commitSha} from ${repoUrl}: ${error}`);
             return [];
         }
     }
@@ -367,7 +368,7 @@ export class GitSubmoduleChecker {
         tl.setVariable('SubmodulesNeedingUpdate', needsUpdate.toString());
         tl.setVariable('SubmodulesNeedingUpdateList', needsUpdateList);
 
-        tl.debug(`Set output variables - Total: ${total}, UpToDate: ${upToDate}, NeedingUpdate: ${needsUpdate}`);
+        debugLog(`Set output variables - Total: ${total}, UpToDate: ${upToDate}, NeedingUpdate: ${needsUpdate}`);
     }
 }
 export interface GitmodulesEntry {

@@ -2,6 +2,7 @@ import * as tl from 'azure-pipelines-task-lib/task';
 import { GitSubmoduleChecker } from './GitSubmoduleChecker';
 import { PullRequestCommentManager } from './PullRequestCommentManager';
 import { PullRequestCreator } from './PullRequestCreator';
+import { debugLog } from './utils';
 
 async function run(): Promise<void> {
     try {
@@ -13,7 +14,7 @@ async function run(): Promise<void> {
         const addPullRequestComments = tl.getBoolInput('addPullRequestComments') ?? true;
         const createPullRequests = tl.getBoolInput('createPullRequests') ?? true;
         const suppressTagNames = tl.getInput('suppressTagNames') || 'NoSubmoduleCheck,NoBuild';
-        tl.debug(`Task inputs - workingDirectory: ${workingDirectory}, gitmodulesPath: ${gitmodulesPath}, defaultBranch: ${defaultBranch}, failOnOutdated: ${failOnOutdated}, addPullRequestComments: ${addPullRequestComments}, createPullRequests: ${createPullRequests}, suppressTagNames: ${suppressTagNames}`);
+        debugLog(`Task inputs - workingDirectory: ${workingDirectory}, gitmodulesPath: ${gitmodulesPath}, defaultBranch: ${defaultBranch}, failOnOutdated: ${failOnOutdated}, addPullRequestComments: ${addPullRequestComments}, createPullRequests: ${createPullRequests}, suppressTagNames: ${suppressTagNames}`);
 
         // Check submodules
         const checker = new GitSubmoduleChecker(workingDirectory, gitmodulesPath, defaultBranch, suppressTagNames);

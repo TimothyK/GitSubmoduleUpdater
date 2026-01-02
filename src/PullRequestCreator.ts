@@ -2,6 +2,7 @@ import * as tl from 'azure-pipelines-task-lib';
 import simpleGit, { SimpleGit } from 'simple-git';
 import { AzureDevOpsApi } from './azureDevOpsApi';
 import { SubmoduleInfo } from './SubmoduleInfo';
+import { debugLog } from './utils';
 
 export class PullRequestCreator {
 
@@ -20,7 +21,7 @@ export class PullRequestCreator {
         if (!azDoApi.isPullRequest()) {
             const buildReason = process.env.BUILD_REASON || 'unknown';
             console.log(`ℹ️  Build reason (${buildReason}) indicates this is not a Pull Request - no PR creation needed`);
-            tl.debug('Not running in a Pull Request build context, skipping PR creation');
+            debugLog('Not running in a Pull Request build context, skipping PR creation');
             return;
         }
 
