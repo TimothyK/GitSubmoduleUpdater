@@ -159,7 +159,7 @@ export class GitSubmoduleChecker {
             } else if (trimmedLine.startsWith('url = ')) {
                 currentSubmodule.url = trimmedLine.substring(6).trim();
             } else if (trimmedLine.startsWith('branch = ')) {
-                currentSubmodule.branch = trimmedLine.substring(9).trim();
+                currentSubmodule.branch = trimmedLine.substring(9).trim().replace(/^"|"$/g, '');
             }
         }
 
